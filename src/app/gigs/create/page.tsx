@@ -86,7 +86,7 @@ export default function CreateGigPage() {
       }
 
       router.push('/dashboard')
-    } catch (err) {
+    } catch {
       setError('發生未預期的錯誤')
     } finally {
       setLoading(false)

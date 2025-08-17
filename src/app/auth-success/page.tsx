@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+// import { createClient } from '@/lib/supabase/client'
 import { triggerAuthRefresh } from '@/hooks/useAuth'
 
 export default function AuthSuccessPage() {

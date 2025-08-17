@@ -67,7 +67,7 @@ export default function DashboardPage() {
                 break
               }
             }
-          } catch (e) {
+          } catch {
             console.warn('Failed to parse auth data for key:', key)
           }
         }
@@ -138,7 +138,7 @@ export default function DashboardPage() {
     }
 
     loadData()
-  }, [])
+  }, [router])
 
   const toggleGigStatus = async (gigId: string, currentStatus: boolean) => {
     const { error } = await supabase

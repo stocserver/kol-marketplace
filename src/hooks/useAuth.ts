@@ -54,7 +54,7 @@ export function useAuth(): AuthState {
                 break
               }
             }
-          } catch (e) {
+          } catch {
             console.warn('useAuth: Failed to parse auth data for key:', key)
           }
         }

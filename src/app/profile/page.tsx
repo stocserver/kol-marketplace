@@ -53,7 +53,7 @@ export default function ProfilePage() {
                 break
               }
             }
-          } catch (e) {
+          } catch {
             console.warn('Failed to parse auth data')
           }
         }
@@ -127,7 +127,7 @@ export default function ProfilePage() {
       }
 
       router.push('/dashboard')
-    } catch (err) {
+    } catch {
       setError('發生未預期的錯誤')
     } finally {
       setSaving(false)
