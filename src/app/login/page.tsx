@@ -53,9 +53,9 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-md bg-white rounded-lg shadow-md p-6">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">登入 KOL 推廣平台</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Login to KOL Marketplace</h1>
           <p className="mt-2 text-gray-600">
-            使用您的 Google 帳戶登入或註冊
+            Sign in or register with your Google account
           </p>
         </div>
         
@@ -89,11 +89,11 @@ export default function LoginPage() {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
               />
             </svg>
-            {loading ? '登入中...' : '使用 Google 登入'}
+            {loading ? 'Signing in...' : 'Sign in with Google'}
           </button>
           
           <div className="text-center text-sm text-gray-600">
-            登入即表示您同意我們的服務條款和隱私政策
+            By signing in, you agree to our Terms of Service and Privacy Policy
           </div>
         </div>
       </div>

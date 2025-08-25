@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
 interface User {
   id: string
@@ -26,65 +27,30 @@ export function useAuth(): AuthState {
     loading: true
   })
 
+  const supabase = useMemo(() => createClient(), [])
+
   useEffect(() => {
     async function loadAuth() {
       try {
-        // Check localStorage for auth data
-        const authKeys = Object.keys(localStorage).filter(key => 
-          key.includes('supabase.auth.token')
-        )
+        // Use proper Supabase auth
+        const { data: { user }, error: authError } = await supabase.auth.getUser()
         
-        if (authKeys.length === 0) {
+        if (authError || !user) {
           setAuthState({ user: null, profile: null, loading: false })
           return
         }
 
-        // Get user data from localStorage
-        let userId = null
-        let userData = null
+        // Load profile using Supabase client
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single()
 
-        for (const key of authKeys) {
-          try {
-            const authData = localStorage.getItem(key)
-            if (authData) {
-              const parsed = JSON.parse(authData)
-              if (parsed.user?.id) {
-                userId = parsed.user.id
-                userData = parsed.user
-                break
-              }
-            }
-          } catch {
-            console.warn('useAuth: Failed to parse auth data for key:', key)
-          }
-        }
-
-        if (!userId) {
-          setAuthState({ user: null, profile: null, loading: false })
-          return
-        }
-
-        // Load profile using direct REST API call
-        const profileResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}&select=*`,
-          {
-            headers: {
-              'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-              'Content-Type': 'application/json'
-            }
-          }
-        )
-
-        let profile = null
-        if (profileResponse.ok) {
-          const profileData = await profileResponse.json()
-          if (profileData.length > 0) {
-            profile = profileData[0]
-          }
-        }
+        const profile = (!profileError && profileData) ? profileData : null
 
         setAuthState({
-          user: userData,
+          user: { id: user.id, email: user.email },
           profile,
           loading: false
         })
@@ -97,29 +63,17 @@ export function useAuth(): AuthState {
 
     loadAuth()
 
-    // Listen for storage changes (when user logs in/out)
-    const handleStorageChange = () => {
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state changed:', event)
       loadAuth()
-    }
+    })
 
-    // Listen for custom auth events
-    const handleAuthChange = () => {
-      loadAuth()
-    }
-
-    window.addEventListener('storage', handleStorageChange)
-    window.addEventListener('auth-change', handleAuthChange)
-    
     return () => {
-      window.removeEventListener('storage', handleStorageChange)
-      window.removeEventListener('auth-change', handleAuthChange)
+      subscription.unsubscribe()
     }
-  }, [])
+  }, [supabase])
 
   return authState
 }
 
-// Helper function to trigger auth refresh
-export function triggerAuthRefresh() {
-  window.dispatchEvent(new Event('auth-change'))
-}

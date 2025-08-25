@@ -8,20 +8,20 @@ export default function Home() {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
         <div className="text-center mb-8 sm:mb-12 lg:mb-16">
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 sm:mb-6">
-            台灣 KOL 推廣平台
+            KOL Marketplace Platform
           </h1>
           <p className="text-base sm:text-lg lg:text-xl text-gray-600 mb-6 sm:mb-8 max-w-2xl mx-auto px-4">
-            連接微網紅與商家的專業平台。KOL 提供影片推廣服務，商家輕鬆找到合適的推廣夥伴。
+            Professional platform connecting micro-influencers with businesses. KOL creators offer video promotion services, while businesses easily find suitable promotional partners.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center max-w-sm sm:max-w-none mx-auto">
             <Link href="/register">
               <Button size="lg" className="text-lg px-8">
-                立即註冊
+                Get Started
               </Button>
             </Link>
             <Link href="/login">
               <Button size="lg" variant="outline" className="text-lg px-8">
-                登入
+                Sign In
               </Button>
             </Link>
           </div>
@@ -31,21 +31,21 @@ export default function Home() {
           <Card>
             <CardHeader>
               <CardTitle className="text-2xl text-center">
-                🌟 成為 KOL
+                🌟 Become a KOL
               </CardTitle>
               <CardDescription className="text-center">
-                分享您的影響力，賺取收入
+                Share your influence and earn income
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <ul className="space-y-2 text-gray-600">
-                <li>• 設定您的服務價格 (NT$300-5000)</li>
-                <li>• 建立個人品牌形象</li>
-                <li>• 彈性工作時間</li>
-                <li>• 85% 收益分成</li>
+                <li>• Set your service price ($300-5000)</li>
+                <li>• Build your personal brand</li>
+                <li>• Flexible working hours</li>
+                <li>• 85% revenue share</li>
               </ul>
               <Link href="/register" className="block">
-                <Button className="w-full">開始賺錢</Button>
+                <Button className="w-full">Start Earning</Button>
               </Link>
             </CardContent>
           </Card>
@@ -53,22 +53,22 @@ export default function Home() {
           <Card>
             <CardHeader>
               <CardTitle className="text-2xl text-center">
-                🏢 商家推廣
+                🏢 Business Promotion
               </CardTitle>
               <CardDescription className="text-center">
-                找到完美的 KOL 推廣夥伴
+                Find the perfect KOL promotional partner
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <ul className="space-y-2 text-gray-600">
-                <li>• 瀏覽各種推廣服務</li>
-                <li>• 透明的價格和交付時間</li>
-                <li>• 安全的付款保障</li>
-                <li>• 專業的服務品質</li>
+                <li>• Browse various promotional services</li>
+                <li>• Transparent pricing and delivery times</li>
+                <li>• Secure payment protection</li>
+                <li>• Professional service quality</li>
               </ul>
               <Link href="/marketplace" className="block">
                 <Button variant="outline" className="w-full">
-                  探索服務
+                  Explore Services
                 </Button>
               </Link>
             </CardContent>
@@ -77,29 +77,29 @@ export default function Home() {
 
         <div className="mt-12 sm:mt-16 text-center">
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 sm:mb-8">
-            如何運作
+            How It Works
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 max-w-3xl mx-auto">
             <div className="text-center">
               <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
                 1
               </div>
-              <h3 className="font-semibold mb-2 text-sm sm:text-base">註冊帳戶</h3>
-              <p className="text-gray-600 text-xs sm:text-sm">選擇 KOL 或商家身份</p>
+              <h3 className="font-semibold mb-2 text-sm sm:text-base">Create Account</h3>
+              <p className="text-gray-600 text-xs sm:text-sm">Choose KOL or business identity</p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
                 2
               </div>
-              <h3 className="font-semibold mb-2 text-sm sm:text-base">瀏覽服務</h3>
-              <p className="text-gray-600 text-xs sm:text-sm">找到合適的推廣服務</p>
+              <h3 className="font-semibold mb-2 text-sm sm:text-base">Browse Services</h3>
+              <p className="text-gray-600 text-xs sm:text-sm">Find suitable promotional services</p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
                 3
               </div>
-              <h3 className="font-semibold mb-2 text-sm sm:text-base">完成交易</h3>
-              <p className="text-gray-600 text-xs sm:text-sm">安全付款，品質保證</p>
+              <h3 className="font-semibold mb-2 text-sm sm:text-base">Complete Transaction</h3>
+              <p className="text-gray-600 text-xs sm:text-sm">Secure payment with quality guarantee</p>
             </div>
           </div>
         </div>

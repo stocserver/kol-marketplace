@@ -3,32 +3,17 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRole } from '@/contexts/RoleContext'
-import { useAuth, triggerAuthRefresh } from '@/hooks/useAuth'
+import { useAuth } from '@/hooks/useAuth'
+import { createClient } from '@/lib/supabase/client'
 
 export default function Header() {
   const { user, profile, loading } = useAuth()
   const { currentRole, switchRole, theme } = useRole()
 
+  const supabase = createClient()
+
   const handleSignOut = async () => {
-    // Clear localStorage
-    Object.keys(localStorage).forEach(key => {
-      if (key.includes('supabase')) {
-        localStorage.removeItem(key)
-      }
-    })
-    
-    // Clear cookies
-    document.cookie.split(';').forEach(cookie => {
-      const [name] = cookie.trim().split('=')
-      if (name.includes('supabase') || name.includes('sb-')) {
-        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`
-      }
-    })
-    
-    // Trigger auth refresh
-    triggerAuthRefresh()
-    
-    // Redirect to home
+    await supabase.auth.signOut()
     window.location.href = '/'
   }
 
@@ -82,7 +67,7 @@ export default function Header() {
                         : 'text-white/80 hover:text-white'
                     }`}
                   >
-                    商家
+                    Sponsor
                   </button>
                 </div>
                 
@@ -91,20 +76,29 @@ export default function Header() {
                     href="/marketplace" 
                     className="text-white/80 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
                   >
-                    瀏覽服務
+                    Browse Services
                   </Link>
                   <Link 
                     href="/dashboard" 
                     className="text-white/80 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
                   >
-                    控制面板
+                    Dashboard
+                  </Link>
+                  <Link 
+                    href="/messages" 
+                    className="text-white/80 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"
+                  >
+                    <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.959 8.959 0 01-4.906-1.471L3 21l2.471-5.094A8.959 8.959 0 013 12c0-4.418 3.582-8 8-8s8 3.582 8 8z" />
+                    </svg>
+                    Messages
                   </Link>
                   {currentRole === 'kol' && (
                     <Link 
                       href="/gigs/create" 
                       className="text-white/80 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
                     >
-                      建立服務
+                      Create Service
                     </Link>
                   )}
                 </nav>
@@ -151,13 +145,13 @@ export default function Header() {
                     href="/profile"
                     className="text-white/80 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
                   >
-                    個人資料
+                    Profile
                   </Link>
                   <button
                     onClick={handleSignOut}
                     className="bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
                   >
-                    登出
+                    Sign Out
                   </button>
                 </div>
               </>
@@ -167,13 +161,13 @@ export default function Header() {
                   href="/login"
                   className="text-white/80 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
                 >
-                  登入
+                  Sign In
                 </Link>
                 <Link
                   href="/login"
                   className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
                 >
-                  註冊
+                  Sign Up
                 </Link>
               </div>
             )}
