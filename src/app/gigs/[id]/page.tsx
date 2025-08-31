@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useRole } from '@/contexts/RoleContext'
+import { useAuth } from '@/hooks/useAuth'
 import GigHeader from '@/components/gig/GigHeader'
 import GigGallery from '@/components/gig/GigGallery'
 import GigDescription from '@/components/gig/GigDescription'
@@ -12,68 +13,100 @@ import OrderSummary from '@/components/gig/OrderSummary'
 import KOLProfile from '@/components/gig/KOLProfile'
 import SocialMediaLinks from '@/components/gig/SocialMediaLinks'
 
-// Mock data for testing
-const mockGig = {
-  id: '1',
-  title: 'Instagram Reel + Story Package - Fashion Content Creation',
-  description: 'I will create engaging Instagram content that showcases your fashion brand with authentic storytelling. My content drives real engagement and converts viewers into customers.',
-  price: 299,
-  delivery_days: 3,
-  category: 'Fashion & Beauty',
-  platforms: ['Instagram'],
-  country: 'United States',
-  language: ['English', 'Spanish'],
-  avg_views_per_content: 85000,
-  social_links: {
-    Instagram: 'https://instagram.com/fashionista_emma'
-  },
-  content_type: 'video',
-  deliverables: '1 Instagram Reel (15-30 seconds)\n1 Instagram Story (3-5 slides)\nHigh-resolution photos\nCaption writing\nHashtag research',
-  requirements: 'Product samples or detailed brief\nBrand guidelines (colors, tone)\nSpecific messaging requirements\nAny hashtags or mentions needed',
-  revisions_included: 2,
-  fast_delivery: true,
-  fast_delivery_days: 1,
-  preview_image_url: 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=500',
+interface Gig {
+  id: string
+  title: string
+  description: string
+  price: number
+  delivery_days: number
+  platform: string
+  content_type: string
+  genre_category: string
+  deliverables: string | string[]
+  requirements: string | string[]
+  revisions_included: number
+  fast_delivery: boolean
+  fast_delivery_days?: number
+  preview_image_url?: string
+  image_urls?: string[]
+  approval_status?: string
+  is_active: boolean
+  created_at: string
+  kol_id: string
   kol: {
-    id: 'kol1',
-    username: 'fashionista_emma',
-    full_name: 'Emma Rodriguez',
-    profile_image: 'https://images.unsplash.com/photo-1494790108755-2616b352caf1?w=150',
-    followers: 125000,
-    rating: 4.8,
-    total_orders: 47,
-    response_time: '2 hours',
-    bio: 'Fashion & lifestyle content creator with 125K engaged followers. Specializing in authentic brand partnerships and trendy content that converts.'
+    id: string
+    username: string
+    full_name: string
+    avatar_url?: string
+    bio?: string
+    country?: string
+    languages?: string[]
+    followers?: number
+    avg_views_per_content?: number
+    platforms?: any
   }
 }
 
 export default function GigDetailPage() {
   const params = useParams()
-  const [gig, setGig] = useState(mockGig) // Using mock data for now
-  const [loading, setLoading] = useState(false)
+  const router = useRouter()
+  const [gig, setGig] = useState<Gig | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const { theme } = useRole()
   const supabase = createClient()
 
-  // TODO: Replace with real API call later
   useEffect(() => {
-    // const fetchGig = async () => {
-    //   setLoading(true)
-    //   const { data, error } = await supabase
-    //     .from('gigs')
-    //     .select(`
-    //       *,
-    //       profiles:kol_id (
-    //         id, username, full_name, profile_image
-    //       )
-    //     `)
-    //     .eq('id', params.id)
-    //     .single()
-    //   
-    //   if (data) setGig(data)
-    //   setLoading(false)
-    // }
-    // fetchGig()
-  }, [params.id])
+    const fetchGig = async () => {
+      if (!params.id) return
+      
+      try {
+        setLoading(true)
+        setError(null)
+        
+        const { data, error: fetchError } = await supabase
+          .from('gigs')
+          .select(`
+            *,
+            kol:profiles!gigs_kol_id_fkey(
+              id,
+              username,
+              full_name,
+              avatar_url,
+              bio,
+              country,
+              languages,
+              followers,
+              avg_views_per_content,
+              platforms
+            )
+          `)
+          .eq('id', params.id)
+          .eq('is_active', true)
+          .eq('approval_status', 'approved')
+          .single()
+
+        if (fetchError) {
+          console.error('Error fetching gig:', fetchError)
+          if (fetchError.code === 'PGRST116') {
+            setError('Gig not found or not available')
+          } else {
+            setError('Failed to load gig details')
+          }
+          return
+        }
+
+        setGig(data as Gig)
+      } catch (err) {
+        console.error('Error:', err)
+        setError('An unexpected error occurred')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchGig()
+  }, [params.id, supabase])
 
   if (loading) {
     return (
@@ -83,13 +116,38 @@ export default function GigDetailPage() {
     )
   }
 
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto px-4">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Gig Not Available</h1>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <button
+            onClick={() => router.back()}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors mr-4"
+          >
+            Go Back
+          </button>
+          <button
+            onClick={() => router.push('/marketplace')}
+            className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors"
+          >
+            Browse All Gigs
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   if (!gig) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900">Gig not found</h1>
-          <p className="text-gray-600 mt-2">The gig you're looking for doesn't exist.</p>
-        </div>
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
       </div>
     )
   }
@@ -103,7 +161,7 @@ export default function GigDetailPage() {
           <GigGallery gig={gig} />
           <GigDescription gig={gig} />
           <GigSpecs gig={gig} />
-          <SocialMediaLinks socialLinks={gig.social_links} kolName={gig.kol.full_name} />
+          <SocialMediaLinks socialLinks={gig.kol.platforms || {}} kolName={gig.kol.full_name} />
           <KOLProfile kol={gig.kol} />
         </div>
 

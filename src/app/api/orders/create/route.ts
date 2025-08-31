@@ -25,20 +25,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get user profile
-    const { data: sponsorProfile, error: sponsorError } = await supabase
+    // Get user profile (buyer can be either sponsor or KOL)
+    const { data: buyerProfile, error: buyerError } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', user.id)
       .single()
 
-    if (sponsorError || !sponsorProfile) {
+    if (buyerError || !buyerProfile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
-    // Only sponsors can create orders
-    if (sponsorProfile.user_type !== 'sponsor') {
-      return NextResponse.json({ error: 'Only sponsors can create orders' }, { status: 403 })
+    // Both sponsors and KOLs can create orders (KOLs can purchase from other KOLs)
+    if (!['sponsor', 'kol'].includes(buyerProfile.user_type)) {
+      return NextResponse.json({ error: 'Invalid user type for creating orders' }, { status: 403 })
     }
 
     // Get gig details
@@ -56,12 +56,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Gig not found' }, { status: 404 })
     }
 
-    // Check if KOL has Stripe Connect setup
-    if (!gig.kol.stripe_account_id || !gig.kol.stripe_charges_enabled) {
+    // Prevent users from purchasing their own gigs
+    if (gig.kol_id === user.id) {
+      return NextResponse.json({ error: 'You cannot purchase your own gig' }, { status: 403 })
+    }
+
+    // Check if KOL has Stripe account (required for payouts)
+    if (!gig.kol.stripe_account_id) {
       return NextResponse.json({ 
-        error: 'KOL has not completed Stripe Connect setup' 
+        error: 'KOL has not completed Stripe Connect setup and cannot receive payments' 
       }, { status: 400 })
     }
+    
+    console.log('Creating order for gig:', gig.id, 'KOL:', gig.kol.username, 'Buyer:', buyerProfile.username)
 
     // Calculate fees (15% platform fee)
     const amount = gig.price
@@ -90,14 +97,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create order' }, { status: 500 })
     }
 
-    // Create Stripe payment intent
+    // Create Stripe payment intent for sponsor to pay platform
+    // Platform holds the funds until payout is approved
     const paymentIntent = await createPaymentIntent(
       amount,
       gig.kol.stripe_account_id,
       platformFee
     )
-
-    // Update order with payment intent ID
+    
+    // Update order with payment intent
     await supabase
       .from('orders')
       .update({ stripe_payment_intent_id: paymentIntent.id })
@@ -113,6 +121,8 @@ export async function POST(request: NextRequest) {
         amount: amount,
         application_fee_amount: platformFee
       })
+
+    console.log('✅ Order created successfully:', order.id)
 
     return NextResponse.json({
       orderId: order.id,

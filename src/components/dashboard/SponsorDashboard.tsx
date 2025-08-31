@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useOrders } from '@/hooks/useOrders'
 
 interface SponsorDashboardProps {
   user: any
@@ -9,6 +10,34 @@ interface SponsorDashboardProps {
 
 export default function SponsorDashboard({ user }: SponsorDashboardProps) {
   const [activeTab, setActiveTab] = useState('orders')
+  const { sponsorOrders, loading: ordersLoading, updateOrderStatus } = useOrders()
+  
+  // Calculate stats directly from the fetched orders (same source as the order list)
+  const stats = {
+    active: sponsorOrders.filter(order => 
+      ['pending', 'paid', 'in_progress', 'delivered', 'submitted'].includes(order.status)
+    ).length,
+    completed: sponsorOrders.filter(order => 
+      order.status === 'completed'
+    ).length,
+    total: sponsorOrders.length,
+    totalSpent: sponsorOrders
+      .filter(order => ['delivered', 'completed'].includes(order.status))
+      .reduce((sum, order) => sum + (order.amount || 0), 0)
+  }
+  
+  console.log('Sponsor Dashboard Stats:', {
+    active: stats.active,
+    completed: stats.completed,
+    total: stats.total,
+    totalSpent: stats.totalSpent,
+    userStats: {
+      active_orders: user.active_orders,
+      completed_orders: user.completed_orders,
+      total_orders: user.total_orders,
+      total_spent: user.total_spent
+    }
+  })
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -50,8 +79,69 @@ export default function SponsorDashboard({ user }: SponsorDashboardProps) {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Sponsor Dashboard</h1>
-        <p className="text-gray-600 mt-2">Manage your campaigns and track your orders</p>
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Welcome back, {user.full_name}! 💼</h1>
+            <p className="text-gray-600 mt-2">Manage and track your orders</p>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-gray-500">@{user.username}</p>
+            <p className="text-sm text-gray-500">
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                💼 Sponsor Mode
+              </span>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg p-6 mb-8 text-white">
+        <h2 className="text-xl font-semibold mb-4">🚀 Quick Actions</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Link href="/orders" className="bg-white/20 hover:bg-white/30 rounded-lg p-4 transition-colors group">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-white/20 rounded-lg">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110-2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <p className="font-medium">Manage Orders</p>
+                <p className="text-sm opacity-80">Track progress</p>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/profile" className="bg-white/20 hover:bg-white/30 rounded-lg p-4 transition-colors group">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-white/20 rounded-lg">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <p className="font-medium">Edit Profile</p>
+                <p className="text-sm opacity-80">Company details</p>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/settings/payments" className="bg-white/20 hover:bg-white/30 rounded-lg p-4 transition-colors group">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-white/20 rounded-lg">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
+                  <path fillRule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <p className="font-medium">Payment Settings</p>
+                <p className="text-sm opacity-80">Billing & payment methods</p>
+              </div>
+            </div>
+          </Link>
+        </div>
       </div>
 
       {/* Quick Stats */}
@@ -65,7 +155,7 @@ export default function SponsorDashboard({ user }: SponsorDashboardProps) {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Active Orders</p>
-              <p className="text-2xl font-semibold text-gray-900">{user.active_orders}</p>
+              <p className="text-2xl font-semibold text-gray-900">{ordersLoading ? '...' : stats.active}</p>
             </div>
           </div>
         </div>
@@ -79,21 +169,21 @@ export default function SponsorDashboard({ user }: SponsorDashboardProps) {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Completed</p>
-              <p className="text-2xl font-semibold text-gray-900">{user.completed_orders}</p>
+              <p className="text-2xl font-semibold text-gray-900">{ordersLoading ? '...' : stats.completed}</p>
             </div>
           </div>
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <div className="flex items-center">
-            <div className="p-3 bg-purple-100 rounded-lg">
-              <svg className="w-6 h-6 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M3 6a3 3 0 013-3h10a1 1 0 01.8 1.6L14.25 8l2.55 3.4A1 1 0 0116 13H6a1 1 0 00-1 1v3a1 1 0 11-2 0V6z" clipRule="evenodd" />
+            <div className="p-3 bg-orange-100 rounded-lg">
+              <svg className="w-6 h-6 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
               </svg>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Campaigns</p>
-              <p className="text-2xl font-semibold text-gray-900">{user.total_campaigns}</p>
+              <p className="text-sm font-medium text-gray-600">Total Orders</p>
+              <p className="text-2xl font-semibold text-gray-900">{ordersLoading ? '...' : stats.total}</p>
             </div>
           </div>
         </div>
@@ -108,7 +198,7 @@ export default function SponsorDashboard({ user }: SponsorDashboardProps) {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Spent</p>
-              <p className="text-2xl font-semibold text-gray-900">${user.total_spent.toLocaleString()}</p>
+              <p className="text-2xl font-semibold text-gray-900">{ordersLoading ? '...' : `$${stats.totalSpent.toLocaleString()}`}</p>
             </div>
           </div>
         </div>
@@ -119,7 +209,7 @@ export default function SponsorDashboard({ user }: SponsorDashboardProps) {
         {/* Tabs */}
         <div className="border-b border-gray-200">
           <nav className="-mb-px flex space-x-8 px-6">
-            {['orders', 'campaigns', 'analytics', 'kols'].map((tab) => (
+            {['orders', 'analytics', 'kols'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -157,22 +247,40 @@ export default function SponsorDashboard({ user }: SponsorDashboardProps) {
                 </div>
               </div>
 
-              {user.orders.map((order: any) => (
+              {ordersLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+                  <p className="text-gray-600 mt-2">Loading orders...</p>
+                </div>
+              ) : sponsorOrders.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No orders yet</h3>
+                  <p className="text-gray-600 mb-6">Browse KOL services and place your first order!</p>
+                  <Link href="/marketplace" className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg font-semibold">
+                    Browse Services
+                  </Link>
+                </div>
+              ) : sponsorOrders.map((order) => (
                 <div key={order.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center space-x-4 mb-4">
                         <img
-                          src={order.kol_image}
-                          alt={order.kol_name}
+                          src={order.kol.avatar_url || '/api/placeholder/48/48'}
+                          alt={order.kol.full_name}
                           className="w-12 h-12 rounded-full object-cover"
                         />
                         <div>
-                          <h4 className="font-semibold text-gray-900">{order.gig_title}</h4>
-                          <p className="text-gray-600">KOL: {order.kol_name}</p>
+                          <h4 className="font-semibold text-gray-900">{order.gig.title}</h4>
+                          <p className="text-gray-600">KOL: {order.kol.full_name} (@{order.kol.username})</p>
                           <div className="flex items-center space-x-4 text-sm text-gray-500 mt-1">
-                            <span>Order #{order.id}</span>
-                            <span>Due: {new Date(order.delivery_date).toLocaleDateString()}</span>
+                            <span>Order #{order.id.slice(0, 8)}</span>
+                            <span>Ordered: {new Date(order.created_at).toLocaleDateString()}</span>
                           </div>
                         </div>
                       </div>
@@ -227,73 +335,16 @@ export default function SponsorDashboard({ user }: SponsorDashboardProps) {
             </div>
           )}
 
-          {activeTab === 'campaigns' && (
-            <div>
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">Campaign Overview</h3>
-                <button className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-semibold">
-                  Create Campaign
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {user.campaigns.map((campaign: any) => (
-                  <div key={campaign.id} className="border border-gray-200 rounded-lg p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="font-semibold text-gray-900">{campaign.name}</h4>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        campaign.status === 'active' ? 'bg-green-100 text-green-800' :
-                        campaign.status === 'completed' ? 'bg-blue-100 text-blue-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {campaign.status.toUpperCase()}
-                      </span>
-                    </div>
-                    
-                    <div className="space-y-3 text-sm text-gray-600">
-                      <div className="flex justify-between">
-                        <span>Budget:</span>
-                        <span className="font-medium">${campaign.budget.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Spent:</span>
-                        <span className="font-medium">${campaign.spent.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>KOLs:</span>
-                        <span className="font-medium">{campaign.kol_count}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Reach:</span>
-                        <span className="font-medium">{campaign.total_reach.toLocaleString()}</span>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 pt-4 border-t border-gray-200">
-                      <div className="flex space-x-2">
-                        <button className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-2 rounded text-sm font-medium">
-                          View Report
-                        </button>
-                        <button className="flex-1 bg-purple-100 hover:bg-purple-200 text-purple-800 px-3 py-2 rounded text-sm font-medium">
-                          Manage
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           {activeTab === 'analytics' && (
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-6">Campaign Analytics</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-6">Performance Analytics</h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <div className="bg-blue-50 rounded-lg p-4">
                   <h4 className="text-sm font-medium text-blue-800 mb-2">Total Reach</h4>
                   <p className="text-2xl font-bold text-blue-900">{user.analytics.total_reach.toLocaleString()}</p>
-                  <p className="text-sm text-blue-600">Across all campaigns</p>
+                  <p className="text-sm text-blue-600">Across all orders</p>
                 </div>
                 <div className="bg-green-50 rounded-lg p-4">
                   <h4 className="text-sm font-medium text-green-800 mb-2">Avg. Engagement</h4>
@@ -348,7 +399,7 @@ export default function SponsorDashboard({ user }: SponsorDashboardProps) {
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {user.favorite_kols.map((kol: any) => (
-                  <Link key={kol.id} href={`/profile/${kol.id}`}>
+                  <Link key={kol.id} href={`/profile/${kol.username || kol.id}`}>
                     <div className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer">
                       <div className="flex items-center space-x-4 mb-4">
                         <img

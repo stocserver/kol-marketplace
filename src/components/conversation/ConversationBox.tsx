@@ -40,12 +40,16 @@ interface ConversationBoxProps {
   unreadConversations: Set<string>
   setUnreadConversations: (value: Set<string>) => void
   currentUser: any
+  startNewChat?: string | null
+  setStartNewChat?: (value: string | null) => void
 }
 
 export default function ConversationBox({ 
   unreadConversations, 
   setUnreadConversations, 
-  currentUser 
+  currentUser,
+  startNewChat,
+  setStartNewChat
 }: ConversationBoxProps) {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null)
@@ -56,6 +60,7 @@ export default function ConversationBox({
   const [shouldAutoScroll, setShouldAutoScroll] = useState(false)
   const [hasMoreMessages, setHasMoreMessages] = useState(false)
   const [loadingOlderMessages, setLoadingOlderMessages] = useState(false)
+  const [newChatRecipient, setNewChatRecipient] = useState<any>(null)
   const { theme } = useRole()
   const supabase = createClient()
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -65,6 +70,29 @@ export default function ConversationBox({
   useEffect(() => {
     loadConversations()
   }, [])
+
+  // Handle starting new chat with specific recipient
+  useEffect(() => {
+    if (startNewChat && conversations.length > 0) {
+      // Look for existing conversation with this recipient
+      const existingConversation = conversations.find(conv => 
+        conv.other_participant.id === startNewChat
+      )
+      
+      if (existingConversation) {
+        // Select existing conversation
+        setSelectedConversation(existingConversation.id)
+      } else {
+        // Start new conversation by prefilling message input
+        setNewMessage(`Hello! I'm interested in your services.`)
+        // We'll need the recipient info to show the new conversation
+        loadRecipientInfo(startNewChat)
+      }
+      
+      // Clear the startNewChat parameter
+      setStartNewChat?.(null)
+    }
+  }, [startNewChat, conversations, setStartNewChat])
 
   // Set up polling for new messages every 10 seconds
   useEffect(() => {
@@ -213,6 +241,25 @@ export default function ConversationBox({
     }
   }
 
+  const loadRecipientInfo = async (recipientId: string) => {
+    try {
+      const { data: recipient, error } = await supabase
+        .from('profiles')
+        .select('id, username, full_name')
+        .eq('id', recipientId)
+        .single()
+      
+      if (recipient && !error) {
+        setNewChatRecipient(recipient)
+        // Clear selected conversation to show new chat interface
+        setSelectedConversation('new-chat')
+        setMessages([])
+      }
+    } catch (error) {
+      console.error('Failed to load recipient info:', error)
+    }
+  }
+
   const loadConversations = async () => {
     try {
       const response = await fetch('/api/messages/conversations')
@@ -266,10 +313,21 @@ export default function ConversationBox({
   }
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || !selectedConversation || sendingMessage) return
+    if (!newMessage.trim() || sendingMessage) return
 
-    const conversation = conversations.find(c => c.id === selectedConversation)
-    if (!conversation) return
+    let recipientId
+    
+    if (selectedConversation === 'new-chat' && newChatRecipient) {
+      // New conversation
+      recipientId = newChatRecipient.id
+    } else if (selectedConversation) {
+      // Existing conversation
+      const conversation = conversations.find(c => c.id === selectedConversation)
+      if (!conversation) return
+      recipientId = conversation.other_participant.id
+    } else {
+      return
+    }
 
     setSendingMessage(true)
     try {
@@ -277,7 +335,7 @@ export default function ConversationBox({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          recipientId: conversation.other_participant.id,
+          recipientId: recipientId,
           content: newMessage.trim()
         })
       })
@@ -286,8 +344,17 @@ export default function ConversationBox({
       if (response.ok) {
         setMessages(prev => [...prev, data.message])
         setNewMessage('')
-        // Refresh conversations to update last message
-        loadConversations()
+        
+        // If this was a new chat, we need to refresh conversations and select the new one
+        if (selectedConversation === 'new-chat') {
+          await loadConversations()
+          setNewChatRecipient(null)
+          // The conversation will be selected automatically when conversations refresh
+        } else {
+          // Refresh conversations to update last message
+          loadConversations()
+        }
+        
         // Scroll to bottom after sending message
         setShouldAutoScroll(true)
       }
@@ -357,6 +424,7 @@ export default function ConversationBox({
           loadingOlderMessages={loadingOlderMessages}
           onLoadOlderMessages={loadOlderMessages}
           theme={theme}
+          newChatRecipient={newChatRecipient}
         />
       </div>
     </div>

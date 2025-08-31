@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useRole } from '@/contexts/RoleContext'
-import { mockStripePayment } from '@/lib/stripe/mock-payment'
+import { createClient } from '@/lib/supabase/client'
 
 interface OrderSummaryProps {
   gig: {
@@ -16,7 +16,6 @@ interface OrderSummaryProps {
       id: string
       username: string
       full_name: string
-      response_time: string
     }
   }
 }
@@ -24,40 +23,48 @@ interface OrderSummaryProps {
 export default function OrderSummary({ gig }: OrderSummaryProps) {
   const [fastDelivery, setFastDelivery] = useState(false)
   const [specialRequirements, setSpecialRequirements] = useState('')
-  const [processing, setProcessing] = useState(false)
+  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [isOwnGig, setIsOwnGig] = useState(false)
   const { theme } = useRole()
   const router = useRouter()
+  const supabase = createClient()
 
   const basePrice = gig.price
   const fastDeliveryPrice = fastDelivery ? Math.floor(basePrice * 0.5) : 0 // 50% extra for fast delivery
   const serviceFee = Math.floor((basePrice + fastDeliveryPrice) * 0.05) // 5% service fee
   const totalPrice = basePrice + fastDeliveryPrice + serviceFee
 
-  const handleOrderNow = async () => {
-    setProcessing(true)
-    
-    try {
-      // Mock Stripe payment process
-      const paymentResult = await mockStripePayment({
-        amount: totalPrice,
-        gigId: gig.id,
-        sellerId: gig.kol.id,
-        fastDelivery,
-        specialRequirements
-      })
-
-      if (paymentResult.success) {
-        // Redirect to order success page
-        router.push(`/orders/${paymentResult.orderId}?success=true`)
-      } else {
-        alert('Payment failed. Please try again.')
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        setCurrentUser(user)
+        // Check if this is the user's own gig
+        setIsOwnGig(user.id === gig.kol.id)
       }
-    } catch (error) {
-      console.error('Payment error:', error)
-      alert('Something went wrong. Please try again.')
     }
     
-    setProcessing(false)
+    checkUser()
+  }, [gig.kol.id, supabase])
+
+  const handleOrderNow = () => {
+    if (isOwnGig) {
+      alert('You cannot purchase your own gig!')
+      return
+    }
+    
+    if (!currentUser) {
+      router.push('/login')
+      return
+    }
+    
+    // Redirect to real checkout page with order data
+    const checkoutParams = new URLSearchParams({
+      fastDelivery: fastDelivery.toString(),
+      requirements: specialRequirements
+    })
+    
+    router.push(`/checkout/${gig.id}?${checkoutParams.toString()}`)
   }
 
   return (
@@ -156,17 +163,14 @@ export default function OrderSummary({ gig }: OrderSummaryProps) {
       {/* Order Button */}
       <button
         onClick={handleOrderNow}
-        disabled={processing}
-        className={`w-full ${theme.primary} ${theme.primaryHover} text-white py-3 px-4 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+        disabled={isOwnGig}
+        className={`w-full py-3 px-4 rounded-lg font-semibold transition-colors ${
+          isOwnGig 
+            ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+            : `${theme.primary} ${theme.primaryHover} text-white`
+        }`}
       >
-        {processing ? (
-          <div className="flex items-center justify-center space-x-2">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-            <span>Processing...</span>
-          </div>
-        ) : (
-          'Continue to Payment'
-        )}
+        {isOwnGig ? 'This is Your Gig' : 'Continue to Payment'}
       </button>
 
       {/* KOL Info */}
@@ -177,7 +181,7 @@ export default function OrderSummary({ gig }: OrderSummaryProps) {
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.414L11 9.586V6z" clipRule="evenodd" />
               </svg>
-              <span>Avg. response time: {gig.kol.response_time}</span>
+              <span>Avg. response time: Within 24 hours</span>
             </div>
             <div className="flex items-center space-x-1">
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">

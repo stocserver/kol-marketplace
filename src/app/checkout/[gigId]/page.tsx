@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useRole } from '@/contexts/RoleContext'
-import { mockStripePayment } from '@/lib/stripe/mock-payment'
+import { createClient } from '@/lib/supabase/client'
 import PaymentMethodSelector from '@/components/checkout/PaymentMethodSelector'
 import OrderReview from '@/components/checkout/OrderReview'
 
@@ -33,7 +33,9 @@ interface CheckoutData {
 export default function CheckoutPage() {
   const params = useParams()
   const router = useRouter()
-  const [gig, setGig] = useState(mockGig)
+  const [gig, setGig] = useState<any>(null)
+  const [gigLoading, setGigLoading] = useState(true)
+  const supabase = createClient()
   const [checkoutData, setCheckoutData] = useState<CheckoutData>({
     fastDelivery: false,
     specialRequirements: '',
@@ -45,22 +47,87 @@ export default function CheckoutPage() {
   const { theme } = useRole()
 
   useEffect(() => {
-    // Get checkout data from URL params or localStorage
-    const urlParams = new URLSearchParams(window.location.search)
-    const fastDelivery = urlParams.get('fastDelivery') === 'true'
-    const requirements = urlParams.get('requirements') || ''
-    
-    setCheckoutData({
-      fastDelivery,
-      specialRequirements: requirements,
-      paymentMethod: 'card'
-    })
-  }, [])
+    const loadGigAndCheckoutData = async () => {
+      try {
+        // Get gig data from database
+        const { data: gigData, error: gigError } = await supabase
+          .from('gigs')
+          .select(`
+            *,
+            kol:profiles!gigs_kol_id_fkey(
+              id,
+              username,
+              full_name,
+              avatar_url
+            )
+          `)
+          .eq('id', params.gigId)
+          .eq('is_active', true)
+          .eq('approval_status', 'approved')
+          .single()
+        
+        if (gigError || !gigData) {
+          console.error('Error loading gig:', gigError)
+          router.push('/marketplace')
+          return
+        }
+        
+        setGig({
+          ...gigData,
+          preview_image_url: gigData.image_urls?.[0] || gigData.preview_image_url || 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=500'
+        })
+        
+        // Get checkout data from URL params
+        const urlParams = new URLSearchParams(window.location.search)
+        const fastDelivery = urlParams.get('fastDelivery') === 'true'
+        const requirements = urlParams.get('requirements') || ''
+        
+        setCheckoutData({
+          fastDelivery,
+          specialRequirements: requirements,
+          paymentMethod: 'card'
+        })
+        
+      } catch (error) {
+        console.error('Error loading checkout data:', error)
+        router.push('/marketplace')
+      } finally {
+        setGigLoading(false)
+      }
+    }
 
-  const basePrice = gig.price
-  const fastDeliveryPrice = checkoutData.fastDelivery ? Math.floor(basePrice * 0.5) : 0
+    loadGigAndCheckoutData()
+  }, [params.gigId, router, supabase])
+
+  const basePrice = gig?.price || 0
+  const fastDeliveryPrice = checkoutData.fastDelivery && gig?.fast_delivery ? Math.floor(basePrice * 0.5) : 0
   const serviceFee = Math.floor((basePrice + fastDeliveryPrice) * 0.05)
   const totalPrice = basePrice + fastDeliveryPrice + serviceFee
+  
+  if (gigLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+  
+  if (!gig) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Gig not found</h1>
+          <p className="text-gray-600 mb-6">The gig you're trying to purchase is no longer available.</p>
+          <button
+            onClick={() => router.push('/marketplace')}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg"
+          >
+            Browse Marketplace
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   const handlePayment = async () => {
     setProcessing(true)
@@ -68,24 +135,43 @@ export default function CheckoutPage() {
     setStep(3)
 
     try {
-      // Mock payment processing
-      const paymentResult = await mockStripePayment({
-        amount: totalPrice,
-        gigId: gig.id,
-        sellerId: gig.kol.id,
-        fastDelivery: checkoutData.fastDelivery,
-        specialRequirements: checkoutData.specialRequirements
+      // Create real order via API
+      const response = await fetch('/api/orders/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          gigId: gig.id,
+          requirements: checkoutData.specialRequirements || null
+        }),
       })
 
-      if (paymentResult.success) {
-        // Redirect to success page
-        router.push(`/orders/${paymentResult.orderId}?success=true`)
+      const result = await response.json()
+
+      if (response.ok && result.orderId) {
+        // For now, we'll simulate successful payment since Stripe isn't fully set up
+        // In production, you'd redirect to Stripe checkout or process payment here
+        console.log('Order created:', result)
+        
+        // Update order status to 'paid' to simulate successful payment
+        const { error: updateError } = await supabase
+          .from('orders')
+          .update({ status: 'paid' })
+          .eq('id', result.orderId)
+        
+        if (updateError) {
+          console.error('Error updating order status:', updateError)
+        }
+        
+        // Redirect to order page
+        router.push(`/orders/${result.orderId}?success=true`)
       } else {
-        setPaymentError(paymentResult.error || 'Payment failed. Please try again.')
+        setPaymentError(result.error || 'Order creation failed. Please try again.')
         setStep(2)
       }
     } catch (error) {
-      console.error('Payment error:', error)
+      console.error('Order creation error:', error)
       setPaymentError('Something went wrong. Please try again.')
       setStep(2)
     }

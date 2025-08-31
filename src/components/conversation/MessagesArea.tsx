@@ -49,6 +49,7 @@ interface MessagesAreaProps {
   loadingOlderMessages: boolean
   onLoadOlderMessages: () => void
   theme: any
+  newChatRecipient?: any
 }
 
 import { useEffect } from 'react'
@@ -70,7 +71,8 @@ export default function MessagesArea({
   hasMoreMessages,
   loadingOlderMessages,
   onLoadOlderMessages,
-  theme
+  theme,
+  newChatRecipient
 }: MessagesAreaProps) {
   // Set up intersection observer for lazy loading
   useEffect(() => {
@@ -126,20 +128,29 @@ export default function MessagesArea({
   }
 
   const conversation = conversations.find(c => c.id === selectedConversation)
+  const isNewChat = selectedConversation === 'new-chat'
+  
+  // Get participant info - either from existing conversation or new chat recipient
+  const participant = isNewChat ? newChatRecipient : conversation?.other_participant
 
   return (
     <div className="flex-1 flex flex-col">
       {/* Messages Header */}
       <div className="p-4 border-b border-gray-200 bg-white">
-        {conversation && (
+        {participant && (
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-semibold text-gray-900">
-                {conversation.other_participant?.full_name || 'Unknown User'}
+                {participant.full_name || 'Unknown User'}
               </h3>
               <p className="text-sm text-blue-600">
-                @{conversation.other_participant?.username || 'unknown'}
+                @{participant.username || 'unknown'}
               </p>
+              {isNewChat && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Start a new conversation
+                </p>
+              )}
             </div>
           </div>
         )}

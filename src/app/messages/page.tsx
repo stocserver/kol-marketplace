@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useRole } from '@/contexts/RoleContext'
 import ConversationBox from '@/components/conversation/ConversationBox'
@@ -10,13 +10,23 @@ export default function MessagesPage() {
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [unreadConversations, setUnreadConversations] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
+  const [startNewChat, setStartNewChat] = useState<string | null>(null)
   const { theme } = useRole()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
 
   useEffect(() => {
     getCurrentUser()
   }, [])
+
+  useEffect(() => {
+    // Check if we have a recipient parameter to start a new conversation
+    const recipientId = searchParams.get('recipient')
+    if (recipientId && currentUser) {
+      setStartNewChat(recipientId)
+    }
+  }, [searchParams, currentUser])
 
   const getCurrentUser = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -55,6 +65,8 @@ export default function MessagesPage() {
         unreadConversations={unreadConversations}
         setUnreadConversations={setUnreadConversations}
         currentUser={currentUser}
+        startNewChat={startNewChat}
+        setStartNewChat={setStartNewChat}
       />
     </div>
   )

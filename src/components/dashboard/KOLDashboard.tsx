@@ -1,7 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useOrders } from '@/hooks/useOrders'
+import { createClient } from '@/lib/supabase/client'
 
 interface KOLDashboardProps {
   user: any
@@ -9,6 +11,37 @@ interface KOLDashboardProps {
 
 export default function KOLDashboard({ user }: KOLDashboardProps) {
   const [activeTab, setActiveTab] = useState('orders')
+  const { kolOrders, loading: ordersLoading, updateOrderStatus } = useOrders()
+  const [payoutRequests, setPayoutRequests] = useState<any[]>([])
+  const [payoutLoading, setPayoutLoading] = useState(false)
+  const supabase = createClient()
+  
+  // Calculate stats directly from the fetched orders (same source as the order list)
+  const stats = {
+    active: kolOrders.filter(order => 
+      ['pending', 'paid', 'in_progress', 'delivered', 'submitted'].includes(order.status)
+    ).length,
+    completed: kolOrders.filter(order => 
+      order.status === 'completed'
+    ).length,
+    total: kolOrders.length,
+    totalEarnings: kolOrders
+      .filter(order => order.status === 'completed')
+      .reduce((sum, order) => sum + (order.kol_earnings || 0), 0)
+  }
+  
+  console.log('KOL Dashboard Stats:', {
+    active: stats.active,
+    completed: stats.completed,
+    total: stats.total,
+    totalEarnings: stats.totalEarnings,
+    userStats: {
+      active_orders: user.active_orders,
+      completed_orders: user.completed_orders,
+      total_orders: user.total_orders,
+      total_earnings: user.total_earnings
+    }
+  })
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -46,12 +79,141 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
     }
   }
 
+  // Load payout requests
+  useEffect(() => {
+    if (activeTab === 'payouts') {
+      loadPayoutRequests()
+    }
+  }, [activeTab])
+
+  const loadPayoutRequests = async () => {
+    setPayoutLoading(true)
+    try {
+      const response = await fetch('/api/payouts/request')
+      const data = await response.json()
+      if (data.success) {
+        setPayoutRequests(data.payoutRequests)
+      }
+    } catch (error) {
+      console.error('Error loading payout requests:', error)
+    } finally {
+      setPayoutLoading(false)
+    }
+  }
+
+  const requestPayout = async (orderId: string, message?: string) => {
+    try {
+      const response = await fetch('/api/payouts/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, message })
+      })
+      
+      const data = await response.json()
+      if (data.success) {
+        loadPayoutRequests() // Reload the list
+        alert('Payout request submitted successfully!')
+      } else {
+        alert(data.error || 'Failed to request payout')
+      }
+    } catch (error) {
+      console.error('Error requesting payout:', error)
+      alert('Failed to request payout')
+    }
+  }
+
+  const getPayoutStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return 'bg-yellow-100 text-yellow-800'
+      case 'approved': return 'bg-blue-100 text-blue-800'
+      case 'completed': return 'bg-green-100 text-green-800'
+      case 'rejected': return 'bg-red-100 text-red-800'
+      case 'failed': return 'bg-red-100 text-red-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">KOL Dashboard</h1>
-        <p className="text-gray-600 mt-2">Manage your orders and track your performance</p>
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Welcome back, {user.full_name}! 👋</h1>
+            <p className="text-gray-600 mt-2">Manage your orders and track your performance</p>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-gray-500">@{user.username}</p>
+            <p className="text-sm text-gray-500">
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                👑 KOL Mode
+              </span>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 mb-8 text-white">
+        <h2 className="text-xl font-semibold mb-4">🚀 Quick Actions</h2>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Link href="/profile" className="bg-white/20 hover:bg-white/30 rounded-lg p-4 transition-colors group">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-white/20 rounded-lg">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <p className="font-medium">Edit Profile</p>
+                <p className="text-sm opacity-80">Update bio, platforms</p>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/gigs/create" className="bg-white/20 hover:bg-white/30 rounded-lg p-4 transition-colors group">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-white/20 rounded-lg">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <p className="font-medium">Create Gig</p>
+                <p className="text-sm opacity-80">New service offering</p>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/gigs" className="bg-white/20 hover:bg-white/30 rounded-lg p-4 transition-colors group">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-white/20 rounded-lg">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <p className="font-medium">My Gigs</p>
+                <p className="text-sm opacity-80">View & edit services</p>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/settings/payments" className="bg-white/20 hover:bg-white/30 rounded-lg p-4 transition-colors group">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-white/20 rounded-lg">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
+                  <path fillRule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <p className="font-medium">Payout Settings</p>
+                <p className="text-sm opacity-80">Bank & tax details</p>
+              </div>
+            </div>
+          </Link>
+        </div>
       </div>
 
       {/* Quick Stats */}
@@ -65,7 +227,7 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Active Orders</p>
-              <p className="text-2xl font-semibold text-gray-900">{user.active_orders}</p>
+              <p className="text-2xl font-semibold text-gray-900">{ordersLoading ? '...' : stats.active}</p>
             </div>
           </div>
         </div>
@@ -79,7 +241,7 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Completed</p>
-              <p className="text-2xl font-semibold text-gray-900">{user.completed_orders}</p>
+              <p className="text-2xl font-semibold text-gray-900">{ordersLoading ? '...' : stats.completed}</p>
             </div>
           </div>
         </div>
@@ -108,7 +270,7 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Earnings</p>
-              <p className="text-2xl font-semibold text-gray-900">${user.total_earnings.toLocaleString()}</p>
+              <p className="text-2xl font-semibold text-gray-900">{ordersLoading ? '...' : `$${stats.totalEarnings.toLocaleString()}`}</p>
             </div>
           </div>
         </div>
@@ -119,7 +281,7 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
         {/* Tabs */}
         <div className="border-b border-gray-200">
           <nav className="-mb-px flex space-x-8 px-6">
-            {['orders', 'gigs', 'earnings', 'messages'].map((tab) => (
+            {['orders', 'gigs', 'earnings', 'payouts', 'messages'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -152,36 +314,57 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
                 </div>
               </div>
 
-              {user.orders.map((order: any) => (
+              {ordersLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="text-gray-600 mt-2">Loading orders...</p>
+                </div>
+              ) : kolOrders.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No orders yet</h3>
+                  <p className="text-gray-600 mb-6">You haven't received any orders yet. Create some gigs to start earning!</p>
+                  <Link href="/gigs/create" className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold">
+                    Create Your First Gig
+                  </Link>
+                </div>
+              ) : kolOrders.map((order) => (
                 <div key={order.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center space-x-4 mb-4">
                         <img
-                          src={order.sponsor_image}
-                          alt={order.sponsor_name}
+                          src={order.sponsor.avatar_url || '/api/placeholder/48/48'}
+                          alt={order.sponsor.full_name}
                           className="w-12 h-12 rounded-full object-cover"
                         />
                         <div>
-                          <h4 className="font-semibold text-gray-900">{order.gig_title}</h4>
-                          <p className="text-gray-600">Client: {order.sponsor_name}</p>
+                          <h4 className="font-semibold text-gray-900">{order.gig.title}</h4>
+                          <p className="text-gray-600">Client: {order.sponsor.full_name} (@{order.sponsor.username})</p>
                           <div className="flex items-center space-x-4 text-sm text-gray-500 mt-1">
-                            <span>Order #{order.id}</span>
-                            <span>Due: {new Date(order.delivery_date).toLocaleDateString()}</span>
+                            <span>Order #{order.id.slice(0, 8)}</span>
+                            <span>Ordered: {new Date(order.created_at).toLocaleDateString()}</span>
                           </div>
                         </div>
                       </div>
 
-                      <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                        <h5 className="font-medium text-gray-900 mb-2">Requirements:</h5>
-                        <p className="text-gray-700 text-sm">{order.requirements}</p>
-                      </div>
+                      {order.requirements && (
+                        <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                          <h5 className="font-medium text-gray-900 mb-2">Requirements:</h5>
+                          <p className="text-gray-700 text-sm">{order.requirements}</p>
+                        </div>
+                      )}
 
                       <div className="flex items-center space-x-4">
                         <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
                           {order.status.replace('_', ' ').toUpperCase()}
                         </span>
-                        <span className="text-lg font-bold text-gray-900">${order.amount}</span>
+                        <span className="text-lg font-bold text-green-600">${order.kol_earnings}</span>
+                        <span className="text-sm text-gray-500">($${order.amount} total)</span>
                       </div>
                     </div>
 
@@ -191,6 +374,16 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
                         return (
                           <button
                             disabled={action.disabled}
+                            onClick={() => {
+                              if (!action.disabled) {
+                                const newStatus = action.action === 'start' ? 'in_progress' : 
+                                                action.action === 'submit' ? 'submitted' : 
+                                                action.action === 'revise' ? 'submitted' : order.status
+                                if (newStatus !== order.status) {
+                                  updateOrderStatus(order.id, newStatus as any)
+                                }
+                              }
+                            }}
                             className={`px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors ${action.color} ${action.disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                           >
                             {action.text}
@@ -283,6 +476,161 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
                     </div>
                   ))}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'payouts' && (
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold text-gray-900">Payout Requests</h3>
+                <p className="text-sm text-gray-600">Request payouts from completed orders</p>
+              </div>
+
+              {/* Completed orders eligible for payout */}
+              <div className="mb-8">
+                <h4 className="font-medium text-gray-900 mb-4">💰 Ready for Payout Request</h4>
+                {(() => {
+                  // Check for existing payout requests to determine eligibility
+                  const eligibleOrders = kolOrders.filter(order => {
+                    if (order.status !== 'completed') return false
+                    
+                    // Find existing payout request for this order
+                    const existingRequest = payoutRequests.find(req => req.order_id === order.id)
+                    
+                    // Allow if no request exists, or if the last request was rejected
+                    return !existingRequest || existingRequest.status === 'rejected'
+                  })
+                  
+                  if (eligibleOrders.length === 0) {
+                    return (
+                      <div className="bg-gray-50 rounded-lg p-6 text-center">
+                        <p className="text-gray-600">No completed orders ready for payout request</p>
+                        <p className="text-sm text-gray-500 mt-1">Complete some orders to request payouts</p>
+                      </div>
+                    )
+                  }
+
+                  return (
+                    <div className="grid gap-4">
+                      {eligibleOrders.map((order) => (
+                        <div key={order.id} className="border border-green-200 bg-green-50 rounded-lg p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-3 mb-2">
+                                <img
+                                  src={order.sponsor.avatar_url || '/api/placeholder/32/32'}
+                                  alt={order.sponsor.full_name}
+                                  className="w-8 h-8 rounded-full object-cover"
+                                />
+                                <div>
+                                  <h5 className="font-medium text-gray-900">{order.gig.title}</h5>
+                                  <p className="text-sm text-gray-600">Client: {order.sponsor.full_name}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-4 text-sm">
+                                <span className="text-green-700 font-medium">Your earnings: ${order.kol_earnings}</span>
+                                <span className="text-gray-600">Completed: {new Date(order.updated_at).toLocaleDateString()}</span>
+                                {(() => {
+                                  const existingRequest = payoutRequests.find(req => req.order_id === order.id)
+                                  if (existingRequest?.status === 'rejected') {
+                                    return (
+                                      <span className="text-red-600 font-medium text-xs">Previous request rejected</span>
+                                    )
+                                  }
+                                  return null
+                                })()}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => {
+                                const existingRequest = payoutRequests.find(req => req.order_id === order.id)
+                                const isReRequest = existingRequest?.status === 'rejected'
+                                
+                                if (isReRequest) {
+                                  const retryMessage = prompt('Previous request was rejected. Add a message for this new request (optional):')
+                                  requestPayout(order.id, retryMessage || undefined)
+                                } else {
+                                  requestPayout(order.id)
+                                }
+                              }}
+                              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                            >
+                              {(() => {
+                                const existingRequest = payoutRequests.find(req => req.order_id === order.id)
+                                return existingRequest?.status === 'rejected' ? 'Request Again' : 'Request Payout'
+                              })()}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
+              </div>
+
+              {/* Existing payout requests */}
+              <div>
+                <h4 className="font-medium text-gray-900 mb-4">📋 Your Payout Requests</h4>
+                {payoutLoading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                    <p className="text-gray-600 mt-2">Loading payout requests...</p>
+                  </div>
+                ) : payoutRequests.length === 0 ? (
+                  <div className="bg-gray-50 rounded-lg p-6 text-center">
+                    <p className="text-gray-600">No payout requests yet</p>
+                    <p className="text-sm text-gray-500 mt-1">Request payouts from completed orders above</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {payoutRequests.map((request) => (
+                      <div key={request.id} className="border border-gray-200 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-3 mb-2">
+                              <div>
+                                <h5 className="font-medium text-gray-900">{request.orders?.gig?.title || 'Unknown Gig'}</h5>
+                                <p className="text-sm text-gray-600">
+                                  Order #{request.order_id.slice(0, 8)} • Amount: ${request.amount / 100}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-4 text-sm">
+                              <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getPayoutStatusColor(request.status)}`}>
+                                {request.status.toUpperCase()}
+                              </span>
+                              <span className="text-gray-600">
+                                Requested: {new Date(request.requested_at).toLocaleDateString()}
+                              </span>
+                              {request.reviewed_at && (
+                                <span className="text-gray-600">
+                                  Reviewed: {new Date(request.reviewed_at).toLocaleDateString()}
+                                </span>
+                              )}
+                            </div>
+                            {request.kol_message && (
+                              <div className="mt-2 p-2 bg-gray-50 rounded text-sm">
+                                <span className="font-medium">Your message:</span> {request.kol_message}
+                              </div>
+                            )}
+                            {request.admin_notes && (
+                              <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
+                                <span className="font-medium">Admin notes:</span> {request.admin_notes}
+                              </div>
+                            )}
+                          </div>
+                          {request.status === 'completed' && request.stripe_transfer_id && (
+                            <div className="text-right">
+                              <span className="text-green-600 font-medium text-sm">✅ Transferred</span>
+                              <p className="text-xs text-gray-500">Transfer ID: {request.stripe_transfer_id}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}

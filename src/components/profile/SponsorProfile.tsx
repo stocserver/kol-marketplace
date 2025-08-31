@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/hooks/useAuth'
 import { useRole } from '@/contexts/RoleContext'
 
 interface SponsorProfileProps {
@@ -11,6 +13,16 @@ interface SponsorProfileProps {
 export default function SponsorProfile({ user }: SponsorProfileProps) {
   const [activeTab, setActiveTab] = useState('orders')
   const { theme } = useRole()
+  const { user: currentUser } = useAuth()
+  const router = useRouter()
+
+  const handleMessage = () => {
+    if (!currentUser) {
+      router.push('/login')
+      return
+    }
+    router.push(`/messages?recipient=${user.id}`)
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -66,11 +78,14 @@ export default function SponsorProfile({ user }: SponsorProfileProps) {
               </div>
 
               <div className="flex space-x-3">
-                <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors">
-                  Message
-                </button>
-                <button className="bg-white/20 hover:bg-white/30 text-white px-6 py-2 rounded-lg font-semibold transition-colors">
-                  Follow
+                <button 
+                  onClick={handleMessage}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors flex items-center space-x-2"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.959 8.959 0 01-4.906-1.471L3 21l2.471-5.094A8.959 8.959 0 013 12c0-4.418 3.582-8 8-8s8 3.582 8 8z" />
+                  </svg>
+                  <span>Message</span>
                 </button>
               </div>
             </div>
@@ -141,31 +156,42 @@ export default function SponsorProfile({ user }: SponsorProfileProps) {
             {/* Favorite KOLs */}
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Favorite KOLs</h3>
-              <div className="space-y-3">
-                {user.favorite_kols.map((kol: any) => (
-                  <Link key={kol.id} href={`/profile/${kol.id}`}>
-                    <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
-                      <img
-                        src={kol.image}
-                        alt={kol.name}
-                        className="w-10 h-10 rounded-full object-cover"
-                      />
-                      <div className="flex-1">
-                        <div className="font-medium text-gray-900">{kol.name}</div>
-                        <div className="text-sm text-gray-600">@{kol.username}</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm font-medium text-gray-900">
-                          {kol.followers >= 1000000 ? `${(kol.followers / 1000000).toFixed(1)}M` :
-                           kol.followers >= 1000 ? `${(kol.followers / 1000).toFixed(0)}K` :
-                           kol.followers} followers
+              {user.favorite_kols && user.favorite_kols.length > 0 ? (
+                <div className="space-y-3">
+                  {user.favorite_kols.map((kol: any) => (
+                    <Link key={kol.id} href={`/profile/${kol.username || kol.id}`}>
+                      <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+                        <img
+                          src={kol.image}
+                          alt={kol.name}
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-900">{kol.name}</div>
+                          <div className="text-sm text-gray-600">@{kol.username}</div>
                         </div>
-                        <div className="text-xs text-gray-500">⭐ {kol.rating}</div>
+                        <div className="text-right">
+                          <div className="text-sm font-medium text-gray-900">
+                            {kol.followers >= 1000000 ? `${(kol.followers / 1000000).toFixed(1)}M` :
+                             kol.followers >= 1000 ? `${(kol.followers / 1000).toFixed(0)}K` :
+                             kol.followers} followers
+                          </div>
+                          <div className="text-xs text-gray-500">⭐ {kol.rating}</div>
+                        </div>
                       </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="w-12 h-12 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center">
+                    <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                  </div>
+                  <p className="text-sm text-gray-500">No favorite KOLs yet</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -194,42 +220,59 @@ export default function SponsorProfile({ user }: SponsorProfileProps) {
               <div className="p-6">
                 {activeTab === 'orders' && (
                   <div className="space-y-4">
-                    {user.recent_orders.map((order: any) => (
-                      <Link key={order.id} href={`/orders/${order.id}`}>
-                        <div className="bg-gray-50 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-4">
-                              <img
-                                src={order.kol_image}
-                                alt={order.kol_name}
-                                className="w-12 h-12 rounded-full object-cover"
-                              />
-                              <div>
-                                <h4 className="font-semibold text-gray-900">{order.gig_title}</h4>
-                                <p className="text-sm text-gray-600">with {order.kol_name}</p>
-                                <div className="flex items-center space-x-4 text-xs text-gray-500 mt-1">
-                                  <span>Ordered: {new Date(order.date).toLocaleDateString()}</span>
-                                  <span>Delivery: {new Date(order.delivery_date).toLocaleDateString()}</span>
+                    {user.recent_orders && user.recent_orders.length > 0 ? (
+                      <>
+                        {user.recent_orders.map((order: any) => (
+                          <Link key={order.id} href={`/orders/${order.id}`}>
+                            <div className="bg-gray-50 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-4">
+                                  <img
+                                    src={order.kol_image}
+                                    alt={order.kol_name}
+                                    className="w-12 h-12 rounded-full object-cover"
+                                  />
+                                  <div>
+                                    <h4 className="font-semibold text-gray-900">{order.gig_title}</h4>
+                                    <p className="text-sm text-gray-600">with {order.kol_name}</p>
+                                    <div className="flex items-center space-x-4 text-xs text-gray-500 mt-1">
+                                      <span>Ordered: {new Date(order.date).toLocaleDateString()}</span>
+                                      <span>Delivery: {new Date(order.delivery_date).toLocaleDateString()}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                <div className="text-right">
+                                  <div className="text-lg font-bold text-gray-900">${order.amount}</div>
+                                  <div className={`inline-flex px-2 py-1 rounded-full text-xs font-medium mt-1 ${getStatusColor(order.status)}`}>
+                                    {order.status.replace('_', ' ').toUpperCase()}
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                            
-                            <div className="text-right">
-                              <div className="text-lg font-bold text-gray-900">${order.amount}</div>
-                              <div className={`inline-flex px-2 py-1 rounded-full text-xs font-medium mt-1 ${getStatusColor(order.status)}`}>
-                                {order.status.replace('_', ' ').toUpperCase()}
-                              </div>
-                            </div>
-                          </div>
+                          </Link>
+                        ))}
+                        
+                        <div className="text-center py-6">
+                          <button className={`${theme.primary} ${theme.primaryHover} text-white px-6 py-2 rounded-lg font-semibold`}>
+                            View All Orders
+                          </button>
                         </div>
-                      </Link>
-                    ))}
-                    
-                    <div className="text-center py-6">
-                      <button className={`${theme.primary} ${theme.primaryHover} text-white px-6 py-2 rounded-lg font-semibold`}>
-                        View All Orders
-                      </button>
-                    </div>
+                      </>
+                    ) : (
+                      <div className="text-center py-12">
+                        <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                          <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                          </svg>
+                        </div>
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No Orders Yet</h3>
+                        <p className="text-gray-500 mb-4">You haven't placed any orders yet.</p>
+                        <button className={`${theme.primary} ${theme.primaryHover} text-white px-6 py-2 rounded-lg font-semibold`}>
+                          Browse KOLs
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
 

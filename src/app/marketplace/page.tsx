@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useRole } from '@/contexts/RoleContext'
-import MessageButton from '@/components/MessageButton'
+import { useAuth } from '@/hooks/useAuth'
+import { useFavorites } from '@/hooks/useFavorites'
+import { GENRE_CATEGORIES } from '@/lib/constants'
 
 interface Gig {
   id: string
@@ -12,68 +14,42 @@ interface Gig {
   description: string
   price: number
   delivery_days: number
-  category: string
-  platforms: string[]
-  image_url?: string
-  avg_views_per_content: number
-  country: string
-  language: string[]
-  social_links: {
-    [platform: string]: string
-  }
+  platform: string
+  content_type: string
+  genre_category: string
+  deliverables: string
+  requirements: string
+  revisions_included: number
+  fast_delivery: boolean
+  fast_delivery_days?: number
+  preview_image_url?: string
+  is_active: boolean
+  created_at: string
   kol_id: string
   kol: {
+    id: string
     username: string
     full_name: string
+    avatar_url?: string
+    country?: string
+    languages?: string[]
   }
 }
 
-const CATEGORIES = [
-  'Fashion & Beauty',
-  'Lifestyle',
-  'Technology',
-  'Food & Cooking',
-  'Travel',
-  'Fitness & Health',
-  'Gaming',
-  'Entertainment',
-  'Business',
-  'Education',
-  'Art & Design',
-  'Music'
-]
+// Use categories from shared constants
+const CATEGORIES = GENRE_CATEGORIES.map(cat => cat.label)
 
-const PLATFORMS = [
-  {
-    name: 'Instagram',
-    logo: '📷',
-    color: 'bg-pink-100 text-pink-800'
-  },
-  {
-    name: 'TikTok',
-    logo: '🎵',
-    color: 'bg-black text-white'
-  },
-  {
-    name: 'YouTube',
-    logo: '▶️',
-    color: 'bg-red-100 text-red-800'
-  },
-  {
-    name: 'Twitter',
-    logo: '🐦',
-    color: 'bg-blue-100 text-blue-800'
-  },
-  {
-    name: 'LinkedIn',
-    logo: '💼',
-    color: 'bg-blue-100 text-blue-800'
-  },
-  {
-    name: 'Twitch',
-    logo: '🎮',
-    color: 'bg-purple-100 text-purple-800'
-  }
+// Platform display configuration
+const PLATFORM_CONFIG = [
+  { name: 'Instagram', logo: '📷', color: 'bg-pink-100 text-pink-800' },
+  { name: 'TikTok', logo: '🎵', color: 'bg-black text-white' },
+  { name: 'YouTube', logo: '▶️', color: 'bg-red-100 text-red-800' },
+  { name: 'Facebook', logo: '👥', color: 'bg-blue-100 text-blue-800' },
+  { name: 'Twitter', logo: '🐦', color: 'bg-blue-100 text-blue-800' },
+  { name: 'LinkedIn', logo: '💼', color: 'bg-blue-100 text-blue-800' },
+  { name: 'Twitch', logo: '🎮', color: 'bg-purple-100 text-purple-800' },
+  { name: 'Snapchat', logo: '👻', color: 'bg-yellow-100 text-yellow-800' },
+  { name: 'Pinterest', logo: '📌', color: 'bg-red-100 text-red-800' }
 ]
 
 const VIEW_RANGES = [
@@ -98,114 +74,61 @@ const LANGUAGES = [
   'Vietnamese', 'Hindi', 'Arabic'
 ]
 
-// Mock data for demonstration
-const mockGigs: Gig[] = [
-  {
-    id: '1',
-    title: 'Instagram Reel + Story Package - Fashion Content Creation',
-    description: 'Professional fashion content creation including 1 Instagram Reel (30-60s) and 2 Instagram Stories. Perfect for fashion brands looking to showcase their products with authentic styling.',
-    price: 299,
-    delivery_days: 3,
-    category: 'Fashion & Beauty',
-    platforms: ['Instagram'],
-    country: 'United States',
-    language: ['English', 'Spanish'],
-    image_url: 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=400',
-    avg_views_per_content: 85000,
-    social_links: {
-      Instagram: 'https://instagram.com/fashionista_emma'
-    },
-    kol_id: 'kol1',
-    kol: { username: 'fashionista_emma', full_name: 'Emma Rodriguez' }
-  },
-  {
-    id: '2',
-    title: 'TikTok Viral Video Creation',
-    description: 'Create engaging TikTok content that resonates with your target audience. Includes trending audio, creative editing, and viral-worthy concepts.',
-    price: 450,
-    delivery_days: 2,
-    category: 'Entertainment',
-    platforms: ['TikTok'],
-    country: 'Canada',
-    language: ['English'],
-    image_url: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=400',
-    avg_views_per_content: 120000,
-    social_links: {
-      TikTok: 'https://tiktok.com/@tiktok_creator_alex'
-    },
-    kol_id: 'kol2',
-    kol: { username: 'tiktok_creator_alex', full_name: 'Alex Chen' }
-  },
-  {
-    id: '3',
-    title: 'YouTube Product Review & Unboxing',
-    description: 'Comprehensive product review with professional unboxing, detailed analysis, and honest recommendations for your target audience.',
-    price: 890,
-    delivery_days: 5,
-    category: 'Technology',
-    platforms: ['YouTube'],
-    country: 'United Kingdom',
-    language: ['English'],
-    image_url: 'https://images.unsplash.com/photo-1611605698335-8b1569810432?w=400',
-    avg_views_per_content: 45000,
-    social_links: {
-      YouTube: 'https://youtube.com/@tech_reviewer_mike'
-    },
-    kol_id: 'kol3',
-    kol: { username: 'tech_reviewer_mike', full_name: 'Mike Johnson' }
-  },
-  {
-    id: '4',
-    title: 'Multi-Platform Food Content Package',
-    description: 'Complete food content package including Instagram posts, TikTok recipe videos, and YouTube cooking tutorials. Perfect for food brands and restaurants.',
-    price: 650,
-    delivery_days: 7,
-    category: 'Food & Cooking',
-    platforms: ['Instagram', 'TikTok', 'YouTube'],
-    country: 'South Korea',
-    language: ['Korean', 'English'],
-    avg_views_per_content: 67000,
-    social_links: {
-      Instagram: 'https://instagram.com/chef_sarah',
-      TikTok: 'https://tiktok.com/@chef_sarah',
-      YouTube: 'https://youtube.com/@chef_sarah'
-    },
-    kol_id: 'kol4',
-    kol: { username: 'chef_sarah', full_name: 'Sarah Kim' }
-  },
-  {
-    id: '5',
-    title: 'Fitness Motivation Content Series',
-    description: 'Weekly fitness content series including workout videos, nutrition tips, and motivational posts across Instagram and TikTok.',
-    price: 420,
-    delivery_days: 4,
-    category: 'Fitness & Health',
-    platforms: ['Instagram', 'TikTok'],
-    country: 'Australia',
-    language: ['English'],
-    image_url: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400',
-    avg_views_per_content: 52000,
-    social_links: {
-      Instagram: 'https://instagram.com/fitness_coach_david',
-      TikTok: 'https://tiktok.com/@fitness_coach_david'
-    },
-    kol_id: 'kol5',
-    kol: { username: 'fitness_coach_david', full_name: 'David Wilson' }
-  }
-]
+// Note: Mock data removed - now using real database data
 
 export default function MarketplacePage() {
-  const [gigs, setGigs] = useState<Gig[]>(mockGigs)
-  const [filteredGigs, setFilteredGigs] = useState<Gig[]>(mockGigs)
+  const [gigs, setGigs] = useState<Gig[]>([])
+  const [filteredGigs, setFilteredGigs] = useState<Gig[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('')
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([])
   const [selectedViewRange, setSelectedViewRange] = useState('')
   const [selectedCountry, setSelectedCountry] = useState('')
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([])
-  const [favorites, setFavorites] = useState<string[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const { user } = useAuth()
   const { theme } = useRole()
+  const { toggleFavorite, isFavorited } = useFavorites()
+  const supabase = createClient()
+
+  // Fetch gigs from database
+  useEffect(() => {
+    const fetchGigs = async () => {
+      try {
+        setLoading(true)
+        
+        const { data, error } = await supabase
+          .from('gigs')
+          .select(`
+            *,
+            kol:profiles!gigs_kol_id_fkey(
+              id,
+              username,
+              full_name,
+              avatar_url,
+              country,
+              languages
+            )
+          `)
+          .eq('is_active', true)
+          .eq('approval_status', 'approved')
+          .order('created_at', { ascending: false })
+
+        if (error) {
+          console.error('Error fetching gigs:', error)
+          return
+        }
+
+        setGigs(data || [])
+      } catch (error) {
+        console.error('Error:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchGigs()
+  }, [supabase])
 
   const togglePlatform = (platformName: string) => {
     setSelectedPlatforms(prev =>
@@ -223,25 +146,19 @@ export default function MarketplacePage() {
     )
   }
 
-  const toggleFavorite = (gigId: string, e: React.MouseEvent) => {
+  const handleToggleFavorite = async (gigId: string, e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    setFavorites(prev =>
-      prev.includes(gigId)
-        ? prev.filter(id => id !== gigId)
-        : [...prev, gigId]
-    )
-  }
-
-
-  const formatViews = (views: number) => {
-    if (views >= 1000000) {
-      return `${(views / 1000000).toFixed(1)}M`
-    } else if (views >= 1000) {
-      return `${(views / 1000).toFixed(0)}K`
+    
+    if (!user) {
+      alert('Please log in to favorite gigs')
+      return
     }
-    return views.toString()
+    
+    await toggleFavorite(gigId)
   }
+
+
 
   useEffect(() => {
     let filtered = gigs
@@ -256,35 +173,34 @@ export default function MarketplacePage() {
 
     // Filter by category
     if (selectedCategory) {
-      filtered = filtered.filter(gig => gig.category === selectedCategory)
+      filtered = filtered.filter(gig => gig.genre_category === selectedCategory)
     }
 
     // Filter by platforms
     if (selectedPlatforms.length > 0) {
       filtered = filtered.filter(gig =>
-        selectedPlatforms.some(platform => gig.platforms?.includes(platform))
+        selectedPlatforms.includes(gig.platform)
       )
     }
 
-    // Filter by view range
+    // Filter by view range - using KOL's average views from profile
     if (selectedViewRange) {
       const range = VIEW_RANGES.find(r => r.label === selectedViewRange)
       if (range) {
-        filtered = filtered.filter(gig =>
-          gig.avg_views_per_content >= range.min && gig.avg_views_per_content <= range.max
-        )
+        // For now, we'll skip view filtering since we don't have view data in gigs table
+        // This would need to be joined with KOL profile data or added to gigs table
       }
     }
 
     // Filter by country
     if (selectedCountry) {
-      filtered = filtered.filter(gig => gig.country === selectedCountry)
+      filtered = filtered.filter(gig => gig.kol?.country === selectedCountry)
     }
 
     // Filter by languages
     if (selectedLanguages.length > 0) {
       filtered = filtered.filter(gig =>
-        selectedLanguages.some(language => gig.language?.includes(language))
+        selectedLanguages.some(language => gig.kol?.languages?.includes(language))
       )
     }
 
@@ -324,35 +240,85 @@ export default function MarketplacePage() {
           </div>
 
           {/* Filters */}
-          <div className="bg-white rounded-lg p-6 shadow-sm mb-6">
-            <div className="space-y-6">
-              {/* Category Dropdown */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">All Categories</option>
-                  {CATEGORIES.map(category => (
-                    <option key={category} value={category}>{category}</option>
-                  ))}
-                </select>
+          <div className="bg-white rounded-lg shadow-sm mb-6">
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Filters</h3>
+              
+              {/* Top Row - Dropdowns */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                {/* Category Dropdown */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  >
+                    <option value="">All Categories</option>
+                    {CATEGORIES.map(category => (
+                      <option key={category} value={category}>{category}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Country Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Country/Region</label>
+                  <select
+                    value={selectedCountry}
+                    onChange={(e) => setSelectedCountry(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  >
+                    <option value="">All Countries</option>
+                    {COUNTRIES.map(country => (
+                      <option key={country} value={country}>{country}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* View Range Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Average Views</label>
+                  <select
+                    value={selectedViewRange}
+                    onChange={(e) => setSelectedViewRange(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  >
+                    {VIEW_RANGES.map(range => (
+                      <option key={range.label} value={range.label}>{range.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Clear All Button */}
+                <div className="flex items-end">
+                  <button
+                    onClick={() => {
+                      setSelectedCategory('')
+                      setSelectedPlatforms([])
+                      setSelectedViewRange('')
+                      setSelectedCountry('')
+                      setSelectedLanguages([])
+                    }}
+                    className="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-md transition-colors"
+                  >
+                    Clear All Filters
+                  </button>
+                </div>
               </div>
 
-              {/* Platform Labels */}
-              <div>
+              {/* Platform Selection */}
+              <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-3">Platforms</label>
                 <div className="flex flex-wrap gap-2">
-                  {PLATFORMS.map(platform => (
+                  {PLATFORM_CONFIG.map(platform => (
                     <button
                       key={platform.name}
                       onClick={() => togglePlatform(platform.name)}
-                      className={`inline-flex items-center px-3 py-2 rounded-full text-sm font-medium transition-colors ${
+                      className={`inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                         selectedPlatforms.includes(platform.name)
-                          ? `${platform.color} ring-2 ring-blue-500`
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          ? `${platform.color} ring-2 ring-offset-2 ring-blue-500 shadow-md`
+                          : 'bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200'
                       }`}
                     >
                       <span className="mr-2">{platform.logo}</span>
@@ -362,47 +328,18 @@ export default function MarketplacePage() {
                 </div>
               </div>
 
-              {/* View Range Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Average Views</label>
-                <select
-                  value={selectedViewRange}
-                  onChange={(e) => setSelectedViewRange(e.target.value)}
-                  className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                >
-                  {VIEW_RANGES.map(range => (
-                    <option key={range.label} value={range.label}>{range.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Country Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Country/Region</label>
-                <select
-                  value={selectedCountry}
-                  onChange={(e) => setSelectedCountry(e.target.value)}
-                  className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">All Countries</option>
-                  {COUNTRIES.map(country => (
-                    <option key={country} value={country}>{country}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Language Labels */}
+              {/* Language Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">Languages</label>
-                <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-2 bg-gray-50 rounded-lg border">
                   {LANGUAGES.map(language => (
                     <button
                       key={language}
                       onClick={() => toggleLanguage(language)}
-                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium transition-colors ${
+                      className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
                         selectedLanguages.includes(language)
-                          ? 'bg-teal-100 text-teal-800 ring-2 ring-teal-500'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          ? 'bg-purple-500 text-white shadow-md ring-2 ring-purple-200'
+                          : 'bg-white hover:bg-purple-50 text-gray-700 border border-gray-200 hover:border-purple-200'
                       }`}
                     >
                       {language}
@@ -410,81 +347,75 @@ export default function MarketplacePage() {
                   ))}
                 </div>
               </div>
+            </div>
 
-              {/* Active Filters */}
-              {(selectedCategory || selectedPlatforms.length > 0 || selectedViewRange || selectedCountry || selectedLanguages.length > 0) && (
-                <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-200">
-                  <span className="text-sm text-gray-600">Active filters:</span>
+            {/* Active Filters Bar */}
+            {(selectedCategory || selectedPlatforms.length > 0 || selectedViewRange || selectedCountry || selectedLanguages.length > 0) && (
+              <div className="p-4 bg-gray-50 border-t">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-medium text-gray-600">Active filters:</span>
                   {selectedCategory && (
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {selectedCategory}
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-500 text-white">
+                      📁 {selectedCategory}
                       <button
                         onClick={() => setSelectedCategory('')}
-                        className="ml-2 text-blue-600 hover:text-blue-800"
+                        className="ml-2 text-blue-200 hover:text-white"
                       >
                         ×
                       </button>
                     </span>
                   )}
-                  {selectedPlatforms.map(platform => (
-                    <span key={platform} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      {platform}
-                      <button
-                        onClick={() => togglePlatform(platform)}
-                        className="ml-2 text-green-600 hover:text-green-800"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
+                  {selectedPlatforms.map(platform => {
+                    const platformData = PLATFORM_CONFIG.find(p => p.name === platform)
+                    return (
+                      <span key={platform} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-500 text-white">
+                        <span className="mr-1">{platformData?.logo}</span>
+                        {platform}
+                        <button
+                          onClick={() => togglePlatform(platform)}
+                          className="ml-2 text-green-200 hover:text-white"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    )
+                  })}
                   {selectedViewRange && selectedViewRange !== 'Any' && (
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
-                      Views: {selectedViewRange}
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-teal-500 text-white">
+                      👁️ {selectedViewRange}
                       <button
                         onClick={() => setSelectedViewRange('')}
-                        className="ml-2 text-teal-600 hover:text-teal-800"
+                        className="ml-2 text-teal-200 hover:text-white"
                       >
                         ×
                       </button>
                     </span>
                   )}
                   {selectedCountry && (
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                      {selectedCountry}
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-orange-500 text-white">
+                      🌍 {selectedCountry}
                       <button
                         onClick={() => setSelectedCountry('')}
-                        className="ml-2 text-orange-600 hover:text-orange-800"
+                        className="ml-2 text-orange-200 hover:text-white"
                       >
                         ×
                       </button>
                     </span>
                   )}
                   {selectedLanguages.map(language => (
-                    <span key={language} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                      {language}
+                    <span key={language} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-500 text-white">
+                      💬 {language}
                       <button
                         onClick={() => toggleLanguage(language)}
-                        className="ml-2 text-purple-600 hover:text-purple-800"
+                        className="ml-2 text-purple-200 hover:text-white"
                       >
                         ×
                       </button>
                     </span>
                   ))}
-                  <button
-                    onClick={() => {
-                      setSelectedCategory('')
-                      setSelectedPlatforms([])
-                      setSelectedViewRange('')
-                      setSelectedCountry('')
-                      setSelectedLanguages([])
-                    }}
-                    className="text-xs text-gray-500 hover:text-gray-700 underline"
-                  >
-                    Clear all
-                  </button>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -525,7 +456,7 @@ export default function MarketplacePage() {
                   <Link href={`/gigs/${gig.id}`}>
                     <div className="aspect-[4/3] bg-gray-200 relative cursor-pointer">
                       <img
-                        src={gig.image_url || '/api/placeholder/300/225'}
+                        src={gig.preview_image_url || '/api/placeholder/300/225'}
                         alt={gig.title}
                         className="w-full h-full object-cover"
                         onError={(e) => {
@@ -536,23 +467,26 @@ export default function MarketplacePage() {
                       {/* Category Badge */}
                       <div className="absolute top-2 left-2">
                         <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-white bg-opacity-90 text-gray-800">
-                          {gig.category}
+                          {gig.genre_category.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                         </span>
                       </div>
-                      {/* Favorite Button */}
-                      <button
-                        onClick={(e) => toggleFavorite(gig.id, e)}
-                        className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black bg-opacity-50 hover:bg-opacity-70 flex items-center justify-center transition-all"
-                      >
-                        <svg 
-                          className={`w-4 h-4 ${favorites.includes(gig.id) ? 'text-red-400 fill-current' : 'text-white'}`} 
-                          fill={favorites.includes(gig.id) ? 'currentColor' : 'none'} 
-                          stroke="currentColor" 
-                          viewBox="0 0 24 24"
+                      {/* Favorite Button - only show for logged in users */}
+                      {user && (
+                        <button
+                          onClick={(e) => handleToggleFavorite(gig.id, e)}
+                          className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black bg-opacity-50 hover:bg-opacity-70 flex items-center justify-center transition-all"
+                          title={isFavorited(gig.id) ? 'Remove from favorites' : 'Add to favorites'}
                         >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                        </svg>
-                      </button>
+                          <svg 
+                            className={`w-4 h-4 ${isFavorited(gig.id) ? 'text-red-400 fill-current' : 'text-white'}`} 
+                            fill={isFavorited(gig.id) ? 'currentColor' : 'none'} 
+                            stroke="currentColor" 
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                          </svg>
+                        </button>
+                      )}
                     </div>
                   </Link>
 
@@ -564,7 +498,7 @@ export default function MarketplacePage() {
                           {gig.title}
                         </h3>
                       </Link>
-                      <Link href={`/profile/${gig.kol_id}`}>
+                      <Link href={`/profile/${gig.kol?.username || ''}`}>
                         <p className="text-xs text-blue-600 cursor-pointer hover:text-blue-800 transition-colors">
                           @{gig.kol?.username || 'Unknown'}
                         </p>
@@ -573,38 +507,39 @@ export default function MarketplacePage() {
 
                     {/* Platform Tags */}
                     <div className="flex flex-wrap gap-1 mb-3">
-                      {gig.platforms?.slice(0, 2).map(platformName => {
-                        const platform = PLATFORMS.find(p => p.name === platformName)
+                      {(() => {
+                        const platform = PLATFORM_CONFIG.find(p => p.name === gig.platform)
                         return platform ? (
                           <span
-                            key={platformName}
+                            key={gig.platform}
                             className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${platform.color}`}
                           >
                             <span className="mr-1">{platform.logo}</span>
                             <span className="hidden sm:inline">{platform.name}</span>
                           </span>
-                        ) : null
-                      })}
-                      {gig.platforms && gig.platforms.length > 2 && (
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
-                          +{gig.platforms.length - 2}
-                        </span>
-                      )}
+                        ) : (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                            {gig.platform}
+                          </span>
+                        )
+                      })()}
                     </div>
                     
                     {/* Location & Language Info */}
                     <div className="flex flex-wrap gap-1 mb-2">
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800">
-                        🌍 {gig.country}
-                      </span>
-                      {gig.language?.slice(0, 2).map(lang => (
+                      {gig.kol?.country && (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800">
+                          🌍 {gig.kol.country}
+                        </span>
+                      )}
+                      {gig.kol?.languages?.slice(0, 2).map(lang => (
                         <span key={lang} className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
                           💬 {lang}
                         </span>
                       ))}
-                      {gig.language && gig.language.length > 2 && (
+                      {gig.kol?.languages && gig.kol.languages.length > 2 && (
                         <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
-                          +{gig.language.length - 2}
+                          +{gig.kol.languages.length - 2}
                         </span>
                       )}
                     </div>
@@ -613,13 +548,12 @@ export default function MarketplacePage() {
                     <div className="flex items-center justify-between text-xs text-gray-600 mb-3">
                       <div className="flex items-center space-x-1">
                         <svg className="w-3 h-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        <span className="font-medium">{formatViews(gig.avg_views_per_content)}</span>
+                        <span className="font-medium">{gig.delivery_days}d delivery</span>
                       </div>
                       <div className="text-xs text-gray-500">
-                        {gig.delivery_days}d
+                        {gig.content_type}
                       </div>
                     </div>
 

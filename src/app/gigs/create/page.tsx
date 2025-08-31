@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useRole } from '@/contexts/RoleContext'
+import { useAuth } from '@/hooks/useAuth'
+import { PLATFORM_CATEGORIES, ALL_PLATFORMS, GENRE_CATEGORIES, CONTENT_TYPES } from '@/lib/constants'
 
 export default function CreateGigPage() {
   const [formData, setFormData] = useState({
@@ -21,55 +23,46 @@ export default function CreateGigPage() {
     fast_delivery_days: '',
     preview_image_url: ''
   })
-  const [previewImageFile, setPreviewImageFile] = useState<File | null>(null)
-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string>('')
+  const [imageFiles, setImageFiles] = useState<File[]>([])
+  const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [gigCount, setGigCount] = useState(0)
+  const [checkingGigLimit, setCheckingGigLimit] = useState(true)
   const { currentRole, theme } = useRole()
+  const { user } = useAuth()
   
   const supabase = createClient()
   const router = useRouter()
 
-  // Platform categories (billion+ users organized by type)
-  const platformCategories = {
-    'Social Media Platforms': [
-      'Instagram', 'Facebook', 'Snapchat', 'Pinterest', 'TikTok'
-    ],
-    'Video Platforms': [
-      'YouTube'
-    ],
-    'Messaging Platforms': [
-      'WhatsApp', 'Telegram', 'WeChat (微信)', 'QQ'
-    ]
-  }
+  // Check gig limit on component mount
+  useEffect(() => {
+    const checkGigLimit = async () => {
+      if (!user) return
 
-  // Content genre categories (replacing service categories)
-  const genreCategories = [
-    { value: 'fashion_beauty', label: 'Fashion & Beauty' },
-    { value: 'health_fitness', label: 'Health & Fitness' },
-    { value: 'food_cooking', label: 'Food & Cooking' },
-    { value: 'travel', label: 'Travel & Adventure' },
-    { value: 'gaming', label: 'Gaming' },
-    { value: 'tech', label: 'Technology' },
-    { value: 'business', label: 'Business & Finance' },
-    { value: 'lifestyle', label: 'Lifestyle' },
-    { value: 'entertainment', label: 'Entertainment' },
-    { value: 'education', label: 'Educational Content' },
-    { value: 'sports', label: 'Sports & Recreation' },
-    { value: 'music', label: 'Music & Arts' },
-    { value: 'automotive', label: 'Automotive' },
-    { value: 'home_garden', label: 'Home & Garden' },
-    { value: 'parenting', label: 'Parenting & Family' }
-  ]
+      try {
+        const { data, error } = await supabase
+          .from('gigs')
+          .select('id')
+          .eq('kol_id', user.id)
 
-  // Flatten all platforms for easy processing and remove duplicates
-  const allPlatforms = [...new Set(Object.values(platformCategories).flat())]
+        if (error) {
+          console.error('Error checking gig count:', error)
+          setError('Failed to check gig limit')
+          return
+        }
 
-  const contentTypes = [
-    { value: 'video', label: 'Video' },
-    { value: 'post', label: 'Posts' }
-  ]
+        setGigCount(data?.length || 0)
+      } catch (error) {
+        console.error('Error:', error)
+        setError('Failed to check gig limit')
+      } finally {
+        setCheckingGigLimit(false)
+      }
+    }
 
+    checkGigLimit()
+  }, [user, supabase])
 
   // Helper functions
   const selectPlatform = (platform: string) => {
@@ -80,36 +73,117 @@ export default function CreateGigPage() {
   }
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      // Validate file type
+    const files = Array.from(event.target.files || [])
+    
+    if (files.length === 0) return
+    
+    // Check if adding these files would exceed the 3 image limit
+    if (imageFiles.length + files.length > 3) {
+      setError('You can upload up to 3 images maximum')
+      return
+    }
+    
+    // Validate each file
+    for (const file of files) {
       if (!file.type.startsWith('image/')) {
-        setError('Please select a valid image file')
+        setError('Please select valid image files only')
         return
       }
       
-      // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        setError('Image size must be less than 5MB')
+        setError('Each image must be less than 5MB')
         return
       }
+    }
 
-      setPreviewImageFile(file)
-      
-      // Create preview URL
+    // Add files and create preview URLs
+    const newFiles = [...imageFiles, ...files]
+    const newPreviewUrls = [...imagePreviewUrls]
+    
+    files.forEach((file) => {
       const reader = new FileReader()
       reader.onload = () => {
-        setImagePreviewUrl(reader.result as string)
+        newPreviewUrls.push(reader.result as string)
+        if (newPreviewUrls.length === newFiles.length) {
+          setImagePreviewUrls(newPreviewUrls)
+        }
       }
       reader.readAsDataURL(file)
-      setError('')
-    }
+    })
+    
+    setImageFiles(newFiles)
+    setError('')
   }
 
-  const removeImage = () => {
-    setPreviewImageFile(null)
-    setImagePreviewUrl('')
-    setFormData(prev => ({ ...prev, preview_image_url: '' }))
+  const removeImage = (index: number) => {
+    const newFiles = imageFiles.filter((_, i) => i !== index)
+    const newPreviewUrls = imagePreviewUrls.filter((_, i) => i !== index)
+    
+    setImageFiles(newFiles)
+    setImagePreviewUrls(newPreviewUrls)
+  }
+
+  const fillRandomData = () => {
+    try {
+    const randomTitles = [
+      "I will create viral Instagram reels for your fashion brand",
+      "I will produce engaging TikTok videos for your tech startup",
+      "I will design stunning YouTube thumbnails and intros",
+      "I will write compelling Facebook ad copy that converts",
+      "I will create professional LinkedIn content for your business",
+      "I will shoot aesthetic Pinterest photos for your lifestyle brand",
+      "I will produce gaming content for your Twitch channel"
+    ]
+
+    const randomDescriptions = [
+      "Transform your brand's social media presence with high-quality, engaging content that resonates with your target audience. I specialize in creating authentic, scroll-stopping content that drives engagement and builds community around your brand. With over 2 years of experience in content creation and a deep understanding of platform algorithms, I'll help you achieve your marketing goals.",
+      "Let me create compelling video content that captures attention and drives action. I use the latest trends, music, and editing techniques to ensure your content stands out in crowded feeds. Whether you need product showcases, behind-the-scenes content, or trend-based videos, I'll deliver content that aligns with your brand voice and objectives.",
+      "Professional content creation service designed to elevate your brand's online presence. I combine creative storytelling with strategic marketing insights to produce content that not only looks great but also performs well. From concept development to final delivery, I handle every aspect of the content creation process."
+    ]
+
+    const randomDeliverables = [
+      "• 1 high-quality video (30-60 seconds)\n• 3 Instagram Stories\n• Captions and hashtags\n• 2 rounds of revisions\n• Commercial usage rights for 6 months",
+      "• 5 professional photos\n• Advanced photo editing and retouching\n• 3 different caption variations\n• Optimized hashtag research\n• Full commercial usage rights",
+      "• 1 custom video content piece\n• Trending audio integration\n• Professional video editing\n• Thumbnail design\n• Performance optimization tips"
+    ]
+
+    const randomRequirements = [
+      "Please provide:\n• Product details or brand guidelines\n• Preferred posting dates\n• Any specific messaging requirements\n• Brand colors and style preferences\n• Target audience information",
+      "I'll need:\n• High-resolution product images or samples\n• Brand guidelines (if available)\n• Key messaging points\n• Preferred tone and style\n• Any hashtags to include/avoid",
+      "Please share:\n• Campaign objectives and goals\n• Brand assets (logos, fonts, colors)\n• Content that has worked well before\n• Any compliance requirements\n• Preferred posting schedule"
+    ]
+
+    const randomPrices = [299, 450, 599, 750, 899, 1200, 1500]
+    const randomDeliveryDays = [3, 5, 7, 10, 14]
+    const randomRevisions = [1, 2, 3]
+
+    const randomIndex = Math.floor(Math.random() * randomTitles.length)
+    const fastDelivery = Math.random() > 0.5
+    
+    setFormData({
+      title: randomTitles[randomIndex],
+      description: randomDescriptions[Math.floor(Math.random() * randomDescriptions.length)],
+      price: randomPrices[Math.floor(Math.random() * randomPrices.length)].toString(),
+      delivery_days: randomDeliveryDays[Math.floor(Math.random() * randomDeliveryDays.length)].toString(),
+      platform: ALL_PLATFORMS[Math.floor(Math.random() * ALL_PLATFORMS.length)],
+      content_type: Math.random() > 0.5 ? 'video' : 'post',
+      genre_category: GENRE_CATEGORIES[Math.floor(Math.random() * GENRE_CATEGORIES.length)].value,
+      deliverables: randomDeliverables[Math.floor(Math.random() * randomDeliverables.length)],
+      requirements: randomRequirements[Math.floor(Math.random() * randomRequirements.length)],
+      revisions_included: randomRevisions[Math.floor(Math.random() * randomRevisions.length)].toString(),
+      fast_delivery: fastDelivery,
+      fast_delivery_days: fastDelivery ? Math.floor(Math.random() * 3 + 1).toString() : '',
+      preview_image_url: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=400'
+    })
+    
+    // Set a random preview image
+    setImagePreviewUrls(['https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=400'])
+    
+    console.log('Random data filled successfully')
+    } catch (error) {
+      console.error('Error filling random data:', error)
+      alert('Failed to fill random data. Please try again.')
+    }
   }
 
 
@@ -127,6 +201,7 @@ export default function CreateGigPage() {
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Restricted</h1>
           <p className="text-gray-600 mb-6">Only KOLs can create services. Please switch to KOL mode to use this feature.</p>
+          <p className="text-sm text-gray-500 mb-4">Current role: {currentRole || 'not available'}</p>
           <button
             onClick={() => router.push('/dashboard')}
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
@@ -142,6 +217,13 @@ export default function CreateGigPage() {
     e.preventDefault()
     setLoading(true)
     setError('')
+
+    // Check gig limit before submission
+    if (gigCount >= 3) {
+      setError('You have reached the maximum limit of 3 gigs. Please delete an existing gig to create a new one.')
+      setLoading(false)
+      return
+    }
 
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -181,6 +263,62 @@ export default function CreateGigPage() {
         return
       }
 
+      // Process deliverables and requirements into arrays
+      const deliverablesList = formData.deliverables
+        .split('\n')
+        .map(item => item.trim().replace(/^[•\-\*]\s*/, ''))
+        .filter(item => item.length > 0)
+
+      const requirementsList = formData.requirements
+        .split('\n')
+        .map(item => item.trim().replace(/^[•\-\*]\s*/, ''))
+        .filter(item => item.length > 0)
+
+      let imageUrls: string[] = []
+
+      // Upload images to Supabase storage if files are selected
+      if (imageFiles.length > 0) {
+        try {
+          console.log(`Uploading ${imageFiles.length} images...`)
+          
+          // Debug: Check Supabase session
+          const { data: session, error: sessionError } = await supabase.auth.getSession()
+          console.log('Supabase session:', session?.session?.user?.id, 'Session error:', sessionError)
+          
+          // Upload each image
+          for (let i = 0; i < imageFiles.length; i++) {
+            const file = imageFiles[i]
+            const fileExt = file.name.split('.').pop()
+            const fileName = `${user.id}-${Date.now()}-${i}.${fileExt}`
+            
+            console.log(`Uploading image ${i + 1}:`, fileName, 'Size:', file.size, 'bytes')
+            
+            const { error: uploadError } = await supabase.storage
+              .from('gig-images')
+              .upload(fileName, file)
+
+            if (uploadError) {
+              console.error(`Image ${i + 1} upload error:`, uploadError)
+              setError(`Failed to upload image ${i + 1}: ${uploadError.message}`)
+              return
+            }
+
+            // Get the public URL
+            const { data: urlData } = supabase.storage
+              .from('gig-images')
+              .getPublicUrl(fileName)
+
+            imageUrls.push(urlData.publicUrl)
+          }
+          
+          console.log('All images uploaded successfully:', imageUrls)
+        } catch (uploadError) {
+          console.error('Image upload error:', uploadError)
+          setError('Failed to upload images')
+          return
+        }
+      }
+
       const { error } = await supabase
         .from('gigs')
         .insert({
@@ -192,12 +330,14 @@ export default function CreateGigPage() {
           platform: formData.platform,
           content_type: formData.content_type,
           genre_category: formData.genre_category,
-          deliverables: formData.deliverables,
-          requirements: formData.requirements,
+          deliverables: deliverablesList,
+          requirements: requirementsList,
+          approval_status: 'pending',
           revisions_included: revisions_included,
           fast_delivery: formData.fast_delivery,
           fast_delivery_days: fast_delivery_days,
-          preview_image_url: formData.preview_image_url,
+          preview_image_url: imageUrls[0] || null,
+          image_urls: imageUrls,
           is_active: true
         })
 
@@ -214,15 +354,71 @@ export default function CreateGigPage() {
     }
   }
 
+  // Show loading while checking gig limit
+  if (checkingGigLimit) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  // Show gig limit reached message
+  if (gigCount >= 3) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center max-w-md mx-auto px-4">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Gig Limit Reached</h1>
+          <p className="text-gray-600 mb-6">
+            You have reached the maximum limit of 3 gigs ({gigCount}/3). Please delete an existing gig to create a new one.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button
+              onClick={() => router.push('/gigs')}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors"
+            >
+              Manage My Gigs
+            </button>
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors"
+            >
+              Back to Dashboard
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 lg:p-8">
           <div className="mb-8">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Create New Service</h1>
-            <p className="mt-2 text-gray-600">
-              Share your expertise and create your service offering
-            </p>
+            <div className="flex justify-between items-start">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Create New Service</h1>
+                <p className="mt-2 text-gray-600">
+                  Share your expertise and create your service offering ({gigCount}/3 gigs used)
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={fillRandomData}
+                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-semibold text-sm flex items-center space-x-2 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+                </svg>
+                <span>Fill Test Data</span>
+              </button>
+            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -264,57 +460,71 @@ export default function CreateGigPage() {
               </p>
             </div>
 
-            {/* Preview Image Upload */}
+            {/* Multiple Images Upload */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
-                Gig Preview Image
+                Gig Images ({imageFiles.length}/3)
               </label>
               
-              {!imagePreviewUrl ? (
+              {/* Image Grid */}
+              {imagePreviewUrls.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                  {imagePreviewUrls.map((url, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={url}
+                        alt={`Gig image ${index + 1}`}
+                        className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white rounded-full p-1 transition-colors opacity-0 group-hover:opacity-100"
+                      >
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                      {index === 0 && (
+                        <div className="absolute bottom-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded">
+                          Main
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Upload Area */}
+              {imageFiles.length < 3 && (
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
                   <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
                     <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                   <div className="mt-4">
-                    <label htmlFor="preview-image" className="cursor-pointer">
+                    <label htmlFor="gig-images" className="cursor-pointer">
                       <span className="mt-2 block text-sm font-medium text-gray-900">
-                        Upload a preview image
+                        {imageFiles.length === 0 ? 'Upload gig images' : `Add more images (${3 - imageFiles.length} remaining)`}
                       </span>
                       <span className="mt-2 block text-sm text-gray-500">
-                        PNG, JPG up to 5MB
+                        PNG, JPG up to 5MB each • Up to 3 images total
                       </span>
                     </label>
                     <input
-                      id="preview-image"
-                      name="preview-image"
+                      id="gig-images"
+                      name="gig-images"
                       type="file"
                       accept="image/*"
+                      multiple
                       onChange={handleImageUpload}
                       className="sr-only"
                     />
                   </div>
                 </div>
-              ) : (
-                <div className="relative">
-                  <img
-                    src={imagePreviewUrl}
-                    alt="Gig preview"
-                    className="w-full h-48 object-cover rounded-lg border border-gray-200"
-                  />
-                  <button
-                    type="button"
-                    onClick={removeImage}
-                    className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white rounded-full p-1 transition-colors"
-                  >
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
               )}
               
               <p className="mt-2 text-sm text-gray-500">
-                This image will be displayed as the main preview for your gig. Choose an eye-catching image that represents your service.
+                Upload up to 3 high-quality images that showcase your service. The first image will be used as the main preview.
               </p>
             </div>
 
@@ -331,7 +541,7 @@ export default function CreateGigPage() {
                   value={formData.genre_category}
                   onChange={(e) => setFormData({ ...formData, genre_category: e.target.value })}
                 >
-                  {genreCategories.map(genre => (
+                  {GENRE_CATEGORIES.map(genre => (
                     <option key={genre.value} value={genre.value}>
                       {genre.label}
                     </option>
@@ -353,7 +563,7 @@ export default function CreateGigPage() {
                   value={formData.content_type}
                   onChange={(e) => setFormData({ ...formData, content_type: e.target.value })}
                 >
-                  {contentTypes.map(type => (
+                  {CONTENT_TYPES.map(type => (
                     <option key={type.value} value={type.value}>
                       {type.label}
                     </option>
@@ -375,7 +585,7 @@ export default function CreateGigPage() {
               </label>
               
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                {allPlatforms.map(platform => (
+                {ALL_PLATFORMS.map(platform => (
                   <div key={platform} className="relative">
                     <input
                       type="radio"
@@ -563,7 +773,7 @@ export default function CreateGigPage() {
             </div>
 
             {/* Gig Preview */}
-            <GigPreview formData={formData} imagePreviewUrl={imagePreviewUrl} />
+            <GigPreview formData={formData} imagePreviewUrls={imagePreviewUrls} />
 
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-md p-3">
@@ -595,34 +805,21 @@ export default function CreateGigPage() {
 }
 
 // Gig Preview Component
-function GigPreview({ formData, imagePreviewUrl }: {
+function GigPreview({ formData, imagePreviewUrls }: {
   formData: any
-  imagePreviewUrl: string
+  imagePreviewUrls: string[]
 }) {
-  // Define genre categories for preview component
-  const genreMap: { [key: string]: string } = {
-    'fashion_beauty': 'Fashion & Beauty',
-    'health_fitness': 'Health & Fitness', 
-    'food_cooking': 'Food & Cooking',
-    'travel': 'Travel & Adventure',
-    'gaming': 'Gaming',
-    'tech': 'Technology',
-    'business': 'Business & Finance',
-    'lifestyle': 'Lifestyle',
-    'entertainment': 'Entertainment',
-    'education': 'Educational Content',
-    'sports': 'Sports & Recreation',
-    'music': 'Music & Arts',
-    'automotive': 'Automotive',
-    'home_garden': 'Home & Garden',
-    'parenting': 'Parenting & Family'
-  }
+  // Create genre map from constants
+  const genreMap: { [key: string]: string } = {}
+  GENRE_CATEGORIES.forEach(category => {
+    genreMap[category.value] = category.label
+  })
   
   // Find the selected genre label
   const selectedGenre = genreMap[formData.genre_category] || 'Unknown Genre'
   
   // Only show preview if we have some basic info
-  if (!formData.title && !formData.description && !imagePreviewUrl) {
+  if (!formData.title && !formData.description && imagePreviewUrls.length === 0) {
     return null
   }
 
@@ -637,18 +834,30 @@ function GigPreview({ formData, imagePreviewUrl }: {
       
       {/* Gig Card Preview */}
       <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-4 sm:p-6 max-w-md">
-        {/* Preview Image */}
-        {imagePreviewUrl ? (
+        {/* Preview Images */}
+        {imagePreviewUrls.length > 0 ? (
           <div className="mb-4">
             <img
-              src={imagePreviewUrl}
+              src={imagePreviewUrls[0]}
               alt="Gig preview"
-              className="w-full h-40 object-cover rounded-lg"
+              className="w-full h-40 object-cover rounded-lg mb-2"
             />
+            {imagePreviewUrls.length > 1 && (
+              <div className="flex gap-2">
+                {imagePreviewUrls.slice(1).map((url, index) => (
+                  <img
+                    key={index}
+                    src={url}
+                    alt={`Preview ${index + 2}`}
+                    className="w-16 h-16 object-cover rounded"
+                  />
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           <div className="mb-4 h-40 bg-gray-200 rounded-lg flex items-center justify-center">
-            <span className="text-gray-500 text-sm">No preview image uploaded</span>
+            <span className="text-gray-500 text-sm">No images uploaded</span>
           </div>
         )}
 

@@ -1,3 +1,7 @@
+import Link from 'next/link'
+import { useAuth } from '@/hooks/useAuth'
+import { useRouter } from 'next/navigation'
+
 const PLATFORMS = [
   {
     name: 'Instagram',
@@ -34,25 +38,27 @@ const PLATFORMS = [
 interface GigHeaderProps {
   gig: {
     title: string
-    category?: string
-    platforms?: string[]
-    country?: string
-    language?: string[]
-    avg_views_per_content?: number
-    social_links?: {
-      [platform: string]: string
-    }
+    genre_category: string
+    platform: string
+    content_type: string
     kol: {
+      id: string
       username: string
       full_name: string
-      profile_image: string
-      rating: number
-      total_orders: number
+      avatar_url?: string
+      bio?: string
+      country?: string
+      languages?: string[]
+      followers?: number
+      avg_views_per_content?: number
     }
   }
 }
 
 export default function GigHeader({ gig }: GigHeaderProps) {
+  const { user } = useAuth()
+  const router = useRouter()
+  
   const formatViews = (views: number) => {
     if (views >= 1000000) {
       return `${(views / 1000000).toFixed(1)}M`
@@ -60,6 +66,14 @@ export default function GigHeader({ gig }: GigHeaderProps) {
       return `${(views / 1000).toFixed(0)}K`
     }
     return views.toString()
+  }
+
+  const handleContactKOL = () => {
+    if (!user) {
+      router.push('/login')
+      return
+    }
+    router.push(`/messages?recipient=${gig.kol.id}`)
   }
 
   return (
@@ -72,78 +86,89 @@ export default function GigHeader({ gig }: GigHeaderProps) {
 
           {/* Category, Platform Tags, and Views */}
           <div className="flex flex-wrap items-center gap-2 mb-6">
-            {gig.category && (
-              <span className="inline-flex px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                📁 {gig.category}
-              </span>
-            )}
-            {gig.platforms?.map(platformName => {
-              const platform = PLATFORMS.find(p => p.name === platformName)
+            <span className="inline-flex px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+              📁 {gig.genre_category.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+            </span>
+            
+            {(() => {
+              const platform = PLATFORMS.find(p => p.name === gig.platform)
               return platform ? (
                 <span
-                  key={platformName}
                   className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${platform.color}`}
                 >
                   <span className="mr-2">{platform.logo}</span>
                   {platform.name}
                 </span>
-              ) : null
-            })}
-            {gig.country && (
+              ) : (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+                  {gig.platform}
+                </span>
+              )
+            })()}
+            
+            <span className="inline-flex px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
+              📹 {gig.content_type}
+            </span>
+            
+            {gig.kol.country && (
               <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-orange-100 text-orange-800">
-                🌍 {gig.country}
+                🌍 {gig.kol.country}
               </span>
             )}
-            {gig.language?.map(lang => (
+            {gig.kol.languages?.map(lang => (
               <span key={lang} className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
                 💬 {lang}
               </span>
             ))}
-            {gig.avg_views_per_content && (
+            {gig.kol.avg_views_per_content && (
               <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
                 <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                 </svg>
-                {formatViews(gig.avg_views_per_content)} avg views
+                {formatViews(gig.kol.avg_views_per_content)} avg views
               </span>
             )}
           </div>
           
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <img
-                src={gig.kol.profile_image}
+                src={gig.kol.avatar_url || '/api/placeholder/48/48'}
                 alt={gig.kol.full_name}
                 className="w-12 h-12 rounded-full object-cover"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement
+                  target.src = '/api/placeholder/48/48'
+                }}
               />
               <div>
                 <h3 className="font-semibold text-gray-900">{gig.kol.full_name}</h3>
-                <p className="text-sm text-gray-600">@{gig.kol.username}</p>
+                <Link 
+                  href={`/profile/${gig.kol.username}`}
+                  className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
+                >
+                  @{gig.kol.username}
+                </Link>
               </div>
             </div>
             
-            <div className="flex items-center space-x-4 text-sm text-gray-600">
-              <div className="flex items-center space-x-1">
-                <div className="flex space-x-1">
-                  {[...Array(5)].map((_, i) => (
-                    <svg
-                      key={i}
-                      className={`w-4 h-4 ${
-                        i < Math.floor(gig.kol.rating)
-                          ? 'text-yellow-400'
-                          : 'text-gray-300'
-                      }`}
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                  ))}
+            <div className="flex items-center space-x-3">
+              {gig.kol.followers && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">{gig.kol.followers.toLocaleString()}</span> followers
                 </div>
-                <span className="font-medium">{gig.kol.rating}</span>
-                <span>({gig.kol.total_orders} orders)</span>
-              </div>
+              )}
+              
+              <button
+                onClick={handleContactKOL}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-2"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.959 8.959 0 01-4.906-1.471L3 21l2.471-5.094A8.959 8.959 0 013 12c0-4.418 3.582-8 8-8s8 3.582 8 8z" />
+                </svg>
+                <span>Message</span>
+              </button>
             </div>
           </div>
         </div>

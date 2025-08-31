@@ -7,11 +7,20 @@ interface Activity {
   status: 'completed' | 'current' | 'pending'
 }
 
-interface OrderTimelineProps {
-  activities: Activity[]
+interface OrderFile {
+  id: string
+  filename: string
+  file_url: string
+  file_size: number
+  created_at: string
 }
 
-export default function OrderTimeline({ activities }: OrderTimelineProps) {
+interface OrderTimelineProps {
+  activities: Activity[]
+  orderFiles?: OrderFile[]
+}
+
+export default function OrderTimeline({ activities, orderFiles = [] }: OrderTimelineProps) {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'completed':
@@ -83,24 +92,38 @@ export default function OrderTimeline({ activities }: OrderTimelineProps) {
                 {activity.description}
               </p>
 
-              {/* Additional info based on activity type */}
-              {activity.type === 'work_submitted' && activity.status === 'completed' && (
+              {/* Show actual uploaded files */}
+              {activity.type === 'work_submitted' && activity.status === 'completed' && orderFiles.length > 0 && (
                 <div className="mt-3 p-3 bg-blue-50 rounded-lg">
                   <h4 className="text-sm font-medium text-blue-900 mb-2">Deliverables Ready for Review</h4>
-                  <div className="space-y-1">
-                    <div className="flex items-center text-xs text-blue-700">
-                      <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                      </svg>
-                      instagram_reel_final.mp4
-                    </div>
-                    <div className="flex items-center text-xs text-blue-700">
-                      <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                      </svg>
-                      instagram_story_slides.zip
-                    </div>
+                  <div className="space-y-2">
+                    {orderFiles.map((file) => (
+                      <div key={file.id} className="flex items-center justify-between text-xs">
+                        <div className="flex items-center text-blue-700">
+                          <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                          </svg>
+                          <span className="truncate max-w-[200px]">{file.filename}</span>
+                          <span className="ml-2 text-gray-500">({(file.file_size / 1024 / 1024).toFixed(1)}MB)</span>
+                        </div>
+                        <a 
+                          href={file.file_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="bg-blue-100 hover:bg-blue-200 text-blue-800 px-2 py-1 rounded text-xs font-medium"
+                        >
+                          Download
+                        </a>
+                      </div>
+                    ))}
                   </div>
+                </div>
+              )}
+              
+              {/* Show message if no files uploaded */}
+              {activity.type === 'work_submitted' && activity.status === 'completed' && orderFiles.length === 0 && (
+                <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-gray-600">No files uploaded yet.</p>
                 </div>
               )}
 

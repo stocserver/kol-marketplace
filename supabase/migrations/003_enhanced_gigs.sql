@@ -23,3 +23,16 @@ create index if not exists idx_gigs_fast_delivery on public.gigs(fast_delivery);
 -- Update the existing price constraint to allow higher amounts for complex services
 alter table public.gigs drop constraint if exists gigs_price_check;
 alter table public.gigs add constraint gigs_price_check check (price >= 50 and price <= 100000);
+
+-- Add admin approval system to gigs table
+alter table public.gigs 
+add column if not exists approval_status text default 'pending' check (approval_status in ('pending', 'approved', 'rejected')),
+add column if not exists admin_notes text,
+add column if not exists approved_at timestamptz,
+add column if not exists approved_by uuid references profiles(id);
+
+-- Add index for approval status queries
+create index if not exists idx_gigs_approval_status on public.gigs(approval_status);
+
+-- Update existing gigs to be approved (for backward compatibility)
+update public.gigs set approval_status = 'approved', approved_at = created_at where approval_status = 'pending';

@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/hooks/useAuth'
 import { useRole } from '@/contexts/RoleContext'
 
 interface KOLProfileProps {
@@ -11,6 +13,16 @@ interface KOLProfileProps {
 export default function KOLProfile({ user }: KOLProfileProps) {
   const [activeTab, setActiveTab] = useState('gigs')
   const { theme } = useRole()
+  const { user: currentUser } = useAuth()
+  const router = useRouter()
+
+  const handleMessage = () => {
+    if (!currentUser) {
+      router.push('/login')
+      return
+    }
+    router.push(`/messages?recipient=${user.id}`)
+  }
 
   const formatFollowers = (count: number) => {
     if (count >= 1000000) {
@@ -61,11 +73,14 @@ export default function KOLProfile({ user }: KOLProfileProps) {
               </div>
 
               <div className="flex space-x-3">
-                <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors">
-                  Message
-                </button>
-                <button className="bg-white/20 hover:bg-white/30 text-white px-6 py-2 rounded-lg font-semibold transition-colors">
-                  Follow
+                <button 
+                  onClick={handleMessage}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors flex items-center space-x-2"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.959 8.959 0 01-4.906-1.471L3 21l2.471-5.094A8.959 8.959 0 013 12c0-4.418 3.582-8 8-8s8 3.582 8 8z" />
+                  </svg>
+                  <span>Message</span>
                 </button>
               </div>
             </div>
@@ -91,12 +106,6 @@ export default function KOLProfile({ user }: KOLProfileProps) {
                   <span>Member since {new Date(user.member_since).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
                 </div>
                 
-                <div className="flex items-center space-x-2">
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.414L11 9.586V6z" clipRule="evenodd" />
-                  </svg>
-                  <span>Avg. response time: {user.response_time}</span>
-                </div>
                 
                 <div className="flex items-center space-x-2">
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -129,17 +138,28 @@ export default function KOLProfile({ user }: KOLProfileProps) {
             {/* Recent Work Portfolio */}
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Work</h3>
-              <div className="grid grid-cols-3 gap-2">
-                {user.recent_work.map((image: string, index: number) => (
-                  <div key={index} className="aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity">
-                    <img
-                      src={image}
-                      alt={`Work ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
+              {user.recent_work && user.recent_work.length > 0 ? (
+                <div className="grid grid-cols-3 gap-2">
+                  {user.recent_work.map((image: string, index: number) => (
+                    <div key={index} className="aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity">
+                      <img
+                        src={image}
+                        alt={`Work ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="w-12 h-12 mx-auto mb-3 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
                   </div>
-                ))}
-              </div>
+                  <p className="text-sm text-gray-500">No work samples yet</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -167,8 +187,10 @@ export default function KOLProfile({ user }: KOLProfileProps) {
               
               <div className="p-6">
                 {activeTab === 'gigs' && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {user.gigs.map((gig: any) => (
+                  <div>
+                    {user.gigs && user.gigs.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {user.gigs.map((gig: any) => (
                       <Link key={gig.id} href={`/gigs/${gig.id}`}>
                         <div className="bg-gray-50 rounded-lg overflow-hidden hover:shadow-md transition-shadow cursor-pointer">
                           <div className="aspect-video bg-gray-200">
@@ -198,49 +220,73 @@ export default function KOLProfile({ user }: KOLProfileProps) {
                       </Link>
                     ))}
                   </div>
+                    ) : (
+                      <div className="text-center py-12">
+                        <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                          <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2 2v-5m16 0h-2M4 13h2m13-8l-8 8-4-4" />
+                          </svg>
+                        </div>
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No Gigs Yet</h3>
+                        <p className="text-gray-500 mb-4">This KOL hasn't created any gigs yet.</p>
+                      </div>
+                    )}
+                  </div>
                 )}
 
                 {activeTab === 'reviews' && (
                   <div className="space-y-6">
-                    {user.reviews.map((review: any) => (
-                      <div key={review.id} className="border-b border-gray-200 pb-6">
-                        <div className="flex items-start space-x-4">
-                          <img
-                            src={review.reviewer_image}
-                            alt={review.reviewer_name}
-                            className="w-12 h-12 rounded-full object-cover"
-                          />
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-2">
-                              <h4 className="font-semibold text-gray-900">{review.reviewer_name}</h4>
-                              <span className="text-sm text-gray-500">
-                                {new Date(review.date).toLocaleDateString()}
-                              </span>
-                            </div>
-                            
-                            <div className="flex items-center space-x-2 mb-2">
-                              <div className="flex space-x-1">
-                                {[...Array(5)].map((_, i) => (
-                                  <svg
-                                    key={i}
-                                    className={`w-4 h-4 ${
-                                      i < review.rating ? 'text-yellow-400' : 'text-gray-300'
-                                    }`}
-                                    fill="currentColor"
-                                    viewBox="0 0 20 20"
-                                  >
-                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                  </svg>
-                                ))}
+                    {user.reviews && user.reviews.length > 0 ? (
+                      user.reviews.map((review: any) => (
+                        <div key={review.id} className="border-b border-gray-200 pb-6">
+                          <div className="flex items-start space-x-4">
+                            <img
+                              src={review.reviewer_image}
+                              alt={review.reviewer_name}
+                              className="w-12 h-12 rounded-full object-cover"
+                            />
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between mb-2">
+                                <h4 className="font-semibold text-gray-900">{review.reviewer_name}</h4>
+                                <span className="text-sm text-gray-500">
+                                  {new Date(review.date).toLocaleDateString()}
+                                </span>
                               </div>
-                              <span className="text-sm text-gray-600">for "{review.order_title}"</span>
+                              
+                              <div className="flex items-center space-x-2 mb-2">
+                                <div className="flex space-x-1">
+                                  {[...Array(5)].map((_, i) => (
+                                    <svg
+                                      key={i}
+                                      className={`w-4 h-4 ${
+                                        i < review.rating ? 'text-yellow-400' : 'text-gray-300'
+                                      }`}
+                                      fill="currentColor"
+                                      viewBox="0 0 20 20"
+                                    >
+                                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                    </svg>
+                                  ))}
+                                </div>
+                                <span className="text-sm text-gray-600">for "{review.order_title}"</span>
+                              </div>
+                              
+                              <p className="text-gray-700">{review.comment}</p>
                             </div>
-                            
-                            <p className="text-gray-700">{review.comment}</p>
                           </div>
                         </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-12">
+                        <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                          <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.13 8.13 0 01-3.27-.66L9 20l-.91-2.1A8 8 0 113 12z" />
+                          </svg>
+                        </div>
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No Reviews Yet</h3>
+                        <p className="text-gray-500 mb-4">This KOL hasn't received any reviews yet.</p>
                       </div>
-                    ))}
+                    )}
                   </div>
                 )}
               </div>

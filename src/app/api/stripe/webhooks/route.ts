@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
           .update({ status: 'succeeded' })
           .eq('stripe_payment_intent_id', paymentIntent.id)
 
-        // Update order status
+        // Update order status and get order details
         const { data: paymentAttempt } = await supabase
           .from('payment_attempts')
           .select('order_id')
@@ -69,10 +69,15 @@ export async function POST(request: NextRequest) {
           .single()
 
         if (paymentAttempt) {
-          await supabase
+          const { data: updatedOrder } = await supabase
             .from('orders')
             .update({ status: 'paid' })
             .eq('id', paymentAttempt.order_id)
+            .select()
+            .single()
+
+          console.log(`💰 Payment succeeded for order ${paymentAttempt.order_id}`)
+          console.log(`Platform is now holding $${updatedOrder?.amount} until KOL completes work`)
         }
         
         break
