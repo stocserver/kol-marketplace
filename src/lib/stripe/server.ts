@@ -42,9 +42,7 @@ export async function createAccountLink(accountId: string, refreshUrl: string, r
 
 // Create payment intent for a gig purchase - charges full amount to platform
 export async function createPaymentIntent(
-  amount: number,
-  kolAccountId?: string, // Optional - not needed for simple charge
-  applicationFeeAmount?: number // Optional - calculated in DB instead
+  amount: number
 ) {
   try {
     const paymentIntent = await stripe.paymentIntents.create({
@@ -78,7 +76,11 @@ export async function createRefund(
   reason?: 'duplicate' | 'fraudulent' | 'requested_by_customer'
 ) {
   try {
-    const refundData: any = {
+    const refundData: {
+      payment_intent: string
+      reason: 'duplicate' | 'fraudulent' | 'requested_by_customer'
+      amount?: number
+    } = {
       payment_intent: paymentIntentId,
       reason: reason || 'requested_by_customer'
     }

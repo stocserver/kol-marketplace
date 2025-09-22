@@ -30,7 +30,7 @@ export default function GigDescription({ gig }: GigDescriptionProps) {
 
       <div className="grid md:grid-cols-2 gap-6 mt-8">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-3">What You'll Get</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-3">What You&apos;ll Get</h3>
           <div className="bg-green-50 rounded-lg p-4">
             <ul className="space-y-2">
               {deliverablesList.map((deliverable, index) => (

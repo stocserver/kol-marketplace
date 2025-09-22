@@ -3,7 +3,7 @@
 import { useAuth } from '@/hooks/useAuth'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 interface AdminStats {
@@ -34,9 +34,9 @@ export default function AdminDashboard() {
       return
     }
     fetchStats()
-  }, [user, isAdmin, supabase, router])
+  }, [user, isAdmin, fetchStats, router])
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       setLoading(true)
       
@@ -67,14 +67,14 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [supabase])
 
   if (!user || !isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
-          <p className="text-gray-600">You don't have permission to access this page.</p>
+          <p className="text-gray-600">You don&apos;t have permission to access this page.</p>
         </div>
       </div>
     )

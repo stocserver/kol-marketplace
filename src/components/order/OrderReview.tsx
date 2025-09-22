@@ -164,7 +164,7 @@ export default function OrderReview({
             </div>
             {existingReview.comment && (
               <div className="text-sm text-gray-600">
-                <span className="font-medium">Comment:</span> "{existingReview.comment}"
+                <span className="font-medium">Comment:</span> &quot;{existingReview.comment}&quot;
               </div>
             )}
             <div className="text-xs text-gray-500 mt-2">
@@ -176,7 +176,7 @@ export default function OrderReview({
           {existingReview.kol_response ? (
             <div className="p-4 bg-blue-50 rounded border">
               <div className="text-sm font-medium text-gray-700 mb-2">KOL Response:</div>
-              <div className="text-sm text-gray-600 mb-2">"{existingReview.kol_response}"</div>
+              <div className="text-sm text-gray-600 mb-2">&quot;{existingReview.kol_response}&quot;</div>
               <div className="text-xs text-gray-500">
                 Responded on {new Date(existingReview.kol_response_at!).toLocaleDateString()}
               </div>
@@ -240,7 +240,7 @@ export default function OrderReview({
           </div>
           {comment && (
             <div className="text-sm text-gray-600">
-              <span className="font-medium">Comment:</span> "{comment}"
+              <span className="font-medium">Comment:</span> &quot;{comment}&quot;
             </div>
           )}
         </div>

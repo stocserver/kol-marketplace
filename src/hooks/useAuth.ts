@@ -20,6 +20,15 @@ interface AuthState {
   loading: boolean
 }
 
+// Global auth refresh function
+let globalAuthRefresh: (() => void) | null = null
+
+export function triggerAuthRefresh() {
+  if (globalAuthRefresh) {
+    globalAuthRefresh()
+  }
+}
+
 export function useAuth(): AuthState {
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
@@ -34,7 +43,7 @@ export function useAuth(): AuthState {
       try {
         // Use proper Supabase auth
         const { data: { user }, error: authError } = await supabase.auth.getUser()
-        
+
         if (authError || !user) {
           setAuthState({ user: null, profile: null, loading: false })
           return
@@ -61,16 +70,20 @@ export function useAuth(): AuthState {
       }
     }
 
+    // Set global auth refresh function
+    globalAuthRefresh = loadAuth
+
     loadAuth()
 
     // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       console.log('Auth state changed:', event)
       loadAuth()
     })
 
     return () => {
       subscription.unsubscribe()
+      globalAuthRefresh = null
     }
   }, [supabase])
 

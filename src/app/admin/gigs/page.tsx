@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
 import { GENRE_CATEGORIES } from '@/lib/constants'
@@ -64,9 +64,9 @@ export default function AdminGigsPage() {
       return
     }
     fetchGigs()
-  }, [user, isAdmin, filter, supabase, router])
+  }, [user, isAdmin, fetchGigs, router])
 
-  const fetchGigs = async () => {
+  const fetchGigs = useCallback(async () => {
     try {
       setLoading(true)
       
@@ -104,12 +104,17 @@ export default function AdminGigsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [filter, supabase])
 
   const updateGigStatus = async (gigId: string, status: 'approved' | 'rejected', notes?: string) => {
     setActionLoading(gigId)
     try {
-      const updateData: any = {
+      const updateData: {
+        approval_status: 'approved' | 'rejected'
+        approved_by?: string
+        approved_at: string
+        admin_notes?: string
+      } = {
         approval_status: status,
         approved_by: user?.id,
         approved_at: new Date().toISOString()
@@ -152,7 +157,7 @@ export default function AdminGigsPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
-          <p className="text-gray-600">You don't have permission to access this page.</p>
+          <p className="text-gray-600">You don&apos;t have permission to access this page.</p>
         </div>
       </div>
     )
@@ -207,7 +212,7 @@ export default function AdminGigsPage() {
             {['all', 'pending', 'approved', 'rejected'].map((status) => (
               <button
                 key={status}
-                onClick={() => setFilter(status as any)}
+                onClick={() => setFilter(status as 'all' | 'pending' | 'approved' | 'rejected')}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors capitalize ${
                   filter === status
                     ? status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
@@ -517,7 +522,7 @@ export default function AdminGigsPage() {
 
                     {/* Deliverables */}
                     <div>
-                      <h4 className="text-lg font-semibold text-gray-900 mb-3">📦 What's Included</h4>
+                      <h4 className="text-lg font-semibold text-gray-900 mb-3">📦 What&apos;s Included</h4>
                       <div className="bg-gray-50 p-4 rounded-lg">
                         <div className="text-gray-900 whitespace-pre-wrap">
                           {Array.isArray(reviewGig.deliverables) 
@@ -666,7 +671,7 @@ export default function AdminGigsPage() {
             <div className="bg-white rounded-lg max-w-md w-full p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Reject Gig</h3>
               <p className="text-gray-600 mb-4">
-                Please provide a reason for rejecting "{modalGig.title}":
+                Please provide a reason for rejecting &quot;{modalGig.title}&quot;:
               </p>
               <textarea
                 value={rejectNotes}

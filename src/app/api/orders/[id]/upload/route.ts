@@ -72,7 +72,7 @@ export async function POST(
 
     // Upload file to Supabase Storage
     const fileName = `${params.id}/${Date.now()}_${file.name}`
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('order-files')
       .upload(fileName, file, {
         cacheControl: '3600',

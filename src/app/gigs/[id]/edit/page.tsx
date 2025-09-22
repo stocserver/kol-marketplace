@@ -302,7 +302,7 @@ export default function EditGigPage() {
             {/* Deliverables */}
             <div>
               <label htmlFor="deliverables" className="block text-sm font-medium text-gray-700 mb-3">
-                What You'll Deliver *
+                What You&apos;ll Deliver *
               </label>
               <textarea
                 id="deliverables"

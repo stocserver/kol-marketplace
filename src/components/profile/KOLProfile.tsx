@@ -228,7 +228,7 @@ export default function KOLProfile({ user }: KOLProfileProps) {
                           </svg>
                         </div>
                         <h3 className="text-lg font-medium text-gray-900 mb-2">No Gigs Yet</h3>
-                        <p className="text-gray-500 mb-4">This KOL hasn't created any gigs yet.</p>
+                        <p className="text-gray-500 mb-4">This KOL hasn&apos;t created any gigs yet.</p>
                       </div>
                     )}
                   </div>
@@ -284,7 +284,7 @@ export default function KOLProfile({ user }: KOLProfileProps) {
                           </svg>
                         </div>
                         <h3 className="text-lg font-medium text-gray-900 mb-2">No Reviews Yet</h3>
-                        <p className="text-gray-500 mb-4">This KOL hasn't received any reviews yet.</p>
+                        <p className="text-gray-500 mb-4">This KOL hasn&apos;t received any reviews yet.</p>
                       </div>
                     )}
                   </div>

@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-12-18.acacia'
 })
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Test if Connect is enabled by trying to list accounts
     const accounts = await stripe.accounts.list({ limit: 1 })

@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
         payout: updatedPayout
       })
 
-    } catch (stripeError: any) {
+    } catch (stripeError: unknown) {
       console.error('Stripe transfer error:', stripeError)
       
       // Update payout status to failed

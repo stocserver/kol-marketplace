@@ -150,7 +150,16 @@ export default function ProfilePage() {
       if (!user) return
 
       // Start with basic fields only, then progressively add enhanced fields
-      let profileData: any = {
+      let profileData: {
+        id: string
+        full_name: string
+        user_type: 'kol' | 'sponsor'
+        username?: string
+        bio?: string
+        country?: string
+        languages?: string[]
+        [key: string]: any
+      } = {
         id: user.id,
         full_name: formData.full_name,
         user_type: formData.user_type

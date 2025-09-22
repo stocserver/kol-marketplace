@@ -138,7 +138,7 @@ export default function OrderTimeline({ activities, orderFiles = [] }: OrderTime
                 <div className="mt-3 p-3 bg-yellow-50 rounded-lg">
                   <h4 className="text-sm font-medium text-yellow-900 mb-1">Revision Requested</h4>
                   <p className="text-xs text-yellow-700">
-                    "Could you make the background music a bit louder and add the brand logo in the corner?"
+                    &quot;Could you make the background music a bit louder and add the brand logo in the corner?&quot;
                   </p>
                 </div>
               )}

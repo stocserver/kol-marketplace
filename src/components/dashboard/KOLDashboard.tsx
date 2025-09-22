@@ -327,7 +327,7 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
                     </svg>
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">No orders yet</h3>
-                  <p className="text-gray-600 mb-6">You haven't received any orders yet. Create some gigs to start earning!</p>
+                  <p className="text-gray-600 mb-6">You haven&apos;t received any orders yet. Create some gigs to start earning!</p>
                   <Link href="/gigs/create" className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold">
                     Create Your First Gig
                   </Link>

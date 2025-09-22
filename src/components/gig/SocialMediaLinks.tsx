@@ -46,7 +46,7 @@ export default function SocialMediaLinks({ socialLinks, kolName }: SocialMediaLi
   return (
     <div className="bg-white rounded-lg p-6 shadow-sm border">
       <h2 className="text-xl font-bold text-gray-900 mb-4">
-        📱 {kolName}'s Social Media
+        📱 {kolName}&apos;s Social Media
       </h2>
       <p className="text-gray-600 mb-6 text-sm">
         Visit my social media profiles to see my content style and engagement rates before placing your order.
@@ -91,7 +91,7 @@ export default function SocialMediaLinks({ socialLinks, kolName }: SocialMediaLi
           <div>
             <p className="text-sm text-blue-800 font-medium">Why check my social media?</p>
             <p className="text-xs text-blue-700 mt-1">
-              View my recent posts, engagement rates, and content style to ensure I'm the right fit for your brand collaboration.
+              View my recent posts, engagement rates, and content style to ensure I&apos;m the right fit for your brand collaboration.
             </p>
           </div>
         </div>

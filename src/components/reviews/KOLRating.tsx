@@ -61,7 +61,7 @@ export default function KOLRating({
     }
 
     fetchRating()
-  }, [kolId])
+  }, [kolId, supabase])
 
   const sizeClasses = {
     sm: 'text-sm',
@@ -169,7 +169,7 @@ export function useKOLRating(kolId: string) {
     }
 
     fetchRating()
-  }, [kolId])
+  }, [kolId, supabase])
 
   return { rating, loading }
 }

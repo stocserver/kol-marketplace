@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
 
     // Find or create conversation
     let conversation
-    const { data: existingConversation, error: convError } = await supabase
+    const { data: existingConversation } = await supabase
       .from('conversations')
       .select('id')
       .or(`and(participant_1.eq.${user.id},participant_2.eq.${recipientId}),and(participant_1.eq.${recipientId},participant_2.eq.${user.id})`)

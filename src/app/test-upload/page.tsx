@@ -254,9 +254,9 @@ export default function TestUploadPage() {
           <div className="mt-8 bg-blue-50 p-4 rounded-lg">
             <h3 className="text-lg font-semibold text-blue-900 mb-2">Instructions:</h3>
             <ol className="list-decimal list-inside text-blue-800 space-y-1">
-              <li>First click "Test Bucket Access" to check if you can access the storage</li>
+              <li>First click &quot;Test Bucket Access&quot; to check if you can access the storage</li>
               <li>Select an image file using the file input</li>
-              <li>Click "Test Upload" to attempt the upload</li>
+              <li>Click &quot;Test Upload&quot; to attempt the upload</li>
               <li>Check the results and debug information below</li>
               <li>Open browser console (F12) for additional technical details</li>
             </ol>

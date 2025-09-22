@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     console.log('GET /api/messages/conversations - Starting request')
     
@@ -87,7 +87,12 @@ export async function GET(request: NextRequest) {
       .filter(conv => conv.last_message_id)
       .map(conv => conv.last_message_id)
 
-    let lastMessages: any[] = []
+    let lastMessages: Array<{
+      id: string
+      content: string
+      created_at: string
+      sender_id: string
+    }> = []
     if (lastMessageIds.length > 0) {
       const { data: messagesData } = await supabase
         .from('messages')

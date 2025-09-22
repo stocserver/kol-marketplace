@@ -7,7 +7,32 @@ import { useAuth } from '@/hooks/useAuth'
 import { useRole } from '@/contexts/RoleContext'
 
 interface SponsorProfileProps {
-  user: any
+  user: {
+    id: string
+    full_name: string
+    username: string
+    cover_image?: string
+    profile_image?: string
+    company_size?: string
+    industry?: string
+    website?: string
+    bio?: string
+    favorite_kols?: Array<{
+      id: string
+      name: string
+      username?: string
+      image: string
+      rating: number
+    }>
+    recent_orders?: Array<{
+      id: string
+      service_title: string
+      amount: number
+      status: string
+      created_at: string
+      kol_name: string
+    }>
+  }
 }
 
 export default function SponsorProfile({ user }: SponsorProfileProps) {
@@ -158,7 +183,7 @@ export default function SponsorProfile({ user }: SponsorProfileProps) {
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Favorite KOLs</h3>
               {user.favorite_kols && user.favorite_kols.length > 0 ? (
                 <div className="space-y-3">
-                  {user.favorite_kols.map((kol: any) => (
+                  {user.favorite_kols.map((kol) => (
                     <Link key={kol.id} href={`/profile/${kol.username || kol.id}`}>
                       <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
                         <img
@@ -222,7 +247,7 @@ export default function SponsorProfile({ user }: SponsorProfileProps) {
                   <div className="space-y-4">
                     {user.recent_orders && user.recent_orders.length > 0 ? (
                       <>
-                        {user.recent_orders.map((order: any) => (
+                        {user.recent_orders.map((order) => (
                           <Link key={order.id} href={`/orders/${order.id}`}>
                             <div className="bg-gray-50 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer">
                               <div className="flex items-center justify-between">
@@ -267,7 +292,7 @@ export default function SponsorProfile({ user }: SponsorProfileProps) {
                           </svg>
                         </div>
                         <h3 className="text-lg font-medium text-gray-900 mb-2">No Orders Yet</h3>
-                        <p className="text-gray-500 mb-4">You haven't placed any orders yet.</p>
+                        <p className="text-gray-500 mb-4">You haven&apos;t placed any orders yet.</p>
                         <button className={`${theme.primary} ${theme.primaryHover} text-white px-6 py-2 rounded-lg font-semibold`}>
                           Browse KOLs
                         </button>

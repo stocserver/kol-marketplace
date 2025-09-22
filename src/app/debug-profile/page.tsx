@@ -151,8 +151,8 @@ export default function DebugProfilePage() {
       <div className="mt-6 text-sm text-gray-600">
         <p><strong>Instructions:</strong></p>
         <ol className="list-decimal list-inside mt-2 space-y-1">
-          <li>First, click "Test Profile Access" to check basic database connectivity</li>
-          <li>If that works, try "Test Specific Profile ID" with a known profile ID</li>
+          <li>First, click &quot;Test Profile Access&quot; to check basic database connectivity</li>
+          <li>If that works, try &quot;Test Specific Profile ID&quot; with a known profile ID</li>
           <li>Check the browser console for additional debug information</li>
         </ol>
       </div>

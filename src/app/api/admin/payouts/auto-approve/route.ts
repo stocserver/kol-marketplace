@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import Stripe from 'stripe'
@@ -8,7 +8,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 })
 
 // Auto-approve and process payout requests for completed orders
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     const cookieStore = await cookies()
     const supabase = createServerClient(
@@ -139,8 +139,8 @@ export async function POST(request: NextRequest) {
             kolUsername: payout.profiles.username
           }
 
-        } catch (error: any) {
-          console.error(`❌ Failed to process payout ${payout.id}:`, error.message)
+        } catch (error: unknown) {
+          console.error(`❌ Failed to process payout ${payout.id}:`, error instanceof Error ? error.message : String(error))
           
           // Mark as failed
           await supabase

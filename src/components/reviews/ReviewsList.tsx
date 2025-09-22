@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 interface Review {
@@ -42,7 +42,7 @@ export default function ReviewsList({
   const [currentLimit, setCurrentLimit] = useState(limit || 10)
   const supabase = createClient()
 
-  const loadReviews = async (pageLimit?: number) => {
+  const loadReviews = useCallback(async (pageLimit?: number) => {
     try {
       setLoading(true)
       const query = supabase
@@ -95,11 +95,11 @@ export default function ReviewsList({
     } finally {
       setLoading(false)
     }
-  }
+  }, [kolId, supabase])
 
   useEffect(() => {
     loadReviews(currentLimit)
-  }, [kolId, currentLimit])
+  }, [kolId, currentLimit, loadReviews])
 
   const loadMore = () => {
     const newLimit = currentLimit + 10
@@ -196,7 +196,7 @@ export default function ReviewsList({
                     </p>
                     {showGigTitle && (
                       <p className="text-xs text-gray-500">
-                        for "{review.order.gig.title}"
+                        for &quot;{review.order.gig.title}&quot;
                       </p>
                     )}
                   </div>

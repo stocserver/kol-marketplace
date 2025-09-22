@@ -39,6 +39,7 @@ export default function StripeConnectSection({ profile, onStripeConnectUpdate }:
 
       // Redirect to Stripe onboarding
       window.location.href = data.onboardingUrl
+      onStripeConnectUpdate() // Notify parent component of status change
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
       setIsLoading(false)

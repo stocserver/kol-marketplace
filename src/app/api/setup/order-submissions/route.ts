@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     // Use service role key to execute admin operations
     const supabase = createClient(
@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     )
 
     // Create the order_submissions table using raw SQL
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('information_schema.tables')
       .select('table_name')
       .eq('table_name', 'order_submissions')

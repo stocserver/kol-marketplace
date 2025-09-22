@@ -115,7 +115,7 @@ export default function CheckoutPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Gig not found</h1>
-          <p className="text-gray-600 mb-6">The gig you're trying to purchase is no longer available.</p>
+          <p className="text-gray-600 mb-6">The gig you&apos;re trying to purchase is no longer available.</p>
           <button
             onClick={() => router.push('/marketplace')}
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg"
