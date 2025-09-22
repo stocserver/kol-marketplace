@@ -43,15 +43,25 @@ export default function OrderChat({ orderId, sellerId }: OrderChatProps) {
           display_name: profile?.full_name || profile?.username || 'You' 
         })
 
-        // Load existing messages
-        const { data: messagesData, error: messagesError } = await supabase
+        // Load existing messages - exclude submission and file upload messages
+        const { data: allMessages, error: messagesError } = await supabase
           .from('order_messages')
           .select('*')
           .eq('order_id', orderId)
           .order('created_at', { ascending: true })
 
-        if (!messagesError && messagesData) {
-          setMessages(messagesData)
+        if (!messagesError && allMessages) {
+          // Filter out submission and file upload messages on the client side
+          const filteredMessages = allMessages.filter(msg => {
+            const message = msg.message.toLowerCase()
+            return !message.includes('submitted the work') &&
+                   !message.includes('submitted work') &&
+                   !message.includes('✅ i have submitted') &&
+                   !message.includes('uploaded') &&
+                   !message.includes('📹 uploaded') &&
+                   !message.includes('🚀 i have started working')
+          })
+          setMessages(filteredMessages)
         }
 
         setLoading(false)
@@ -68,7 +78,20 @@ export default function OrderChat({ orderId, sellerId }: OrderChatProps) {
               filter: `order_id=eq.${orderId}`
             },
             (payload) => {
-              setMessages(prev => [...prev, payload.new as Message])
+              const newMessage = payload.new as Message
+              const message = newMessage.message.toLowerCase()
+
+              // Don't add submission or file upload messages to chat
+              const isSubmissionMessage = message.includes('submitted the work') ||
+                                        message.includes('submitted work') ||
+                                        message.includes('✅ i have submitted') ||
+                                        message.includes('uploaded') ||
+                                        message.includes('📹 uploaded') ||
+                                        message.includes('🚀 i have started working')
+
+              if (!isSubmissionMessage) {
+                setMessages(prev => [...prev, newMessage])
+              }
             }
           )
           .subscribe()

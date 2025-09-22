@@ -140,15 +140,17 @@ export default function FavoritesPage() {
                 {/* Gig Image */}
                 <Link href={`/gigs/${gig.id}`}>
                   <div className="aspect-[4/3] bg-gray-200 relative cursor-pointer">
-                    <img
-                      src={gig.preview_image_url || '/api/placeholder/300/225'}
-                      alt={gig.title}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement
-                        target.src = '/api/placeholder/300/225'
-                      }}
-                    />
+                    {gig.preview_image_url ? (
+                      <img
+                        src={gig.preview_image_url}
+                        alt={gig.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-300 flex items-center justify-center">
+                        <span className="text-gray-500 text-sm">No image</span>
+                      </div>
+                    )}
                     {/* Category Badge */}
                     <div className="absolute top-2 left-2">
                       <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-white bg-opacity-90 text-gray-800">

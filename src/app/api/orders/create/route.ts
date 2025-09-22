@@ -22,8 +22,10 @@ export async function POST(request: NextRequest) {
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
+      console.error('❌ Auth error:', authError)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    console.log('✅ User authenticated:', user.id)
 
     // Get user profile (buyer can be either sponsor or KOL)
     const { data: buyerProfile, error: buyerError } = await supabase
@@ -33,13 +35,17 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (buyerError || !buyerProfile) {
+      console.error('❌ Profile error:', buyerError)
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
+    console.log('✅ User profile:', buyerProfile.user_type)
 
-    // Both sponsors and KOLs can create orders (KOLs can purchase from other KOLs)
-    if (!['sponsor', 'kol'].includes(buyerProfile.user_type)) {
+    // Sponsors, KOLs, and admins can create orders
+    if (!['sponsor', 'kol', 'admin'].includes(buyerProfile.user_type)) {
+      console.error('❌ Invalid user type:', buyerProfile.user_type)
       return NextResponse.json({ error: 'Invalid user type for creating orders' }, { status: 403 })
     }
+    console.log('✅ User type valid:', buyerProfile.user_type)
 
     // Get gig details
     const { data: gig, error: gigError } = await supabase
@@ -58,15 +64,13 @@ export async function POST(request: NextRequest) {
 
     // Prevent users from purchasing their own gigs
     if (gig.kol_id === user.id) {
+      console.error('❌ Self-purchase attempt:', user.id, 'gig owner:', gig.kol_id)
       return NextResponse.json({ error: 'You cannot purchase your own gig' }, { status: 403 })
     }
+    console.log('✅ Not self-purchase, proceeding...')
 
-    // Check if KOL has Stripe account (required for payouts)
-    if (!gig.kol.stripe_account_id) {
-      return NextResponse.json({ 
-        error: 'KOL has not completed Stripe Connect setup and cannot receive payments' 
-      }, { status: 400 })
-    }
+    // Note: Individual KOL Stripe accounts not required for platform payments
+    console.log('✅ Skipping individual KOL Stripe account check - using platform account')
     
     console.log('Creating order for gig:', gig.id, 'KOL:', gig.kol.username, 'Buyer:', buyerProfile.username)
 
@@ -77,6 +81,15 @@ export async function POST(request: NextRequest) {
     const kolEarnings = amount - platformFee
 
     // Create order record
+    console.log('✅ Creating order record...', {
+      gigId,
+      sponsorId: user.id,
+      kolId: gig.kol_id,
+      amount,
+      platformFee,
+      kolEarnings
+    })
+
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
@@ -94,16 +107,16 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (orderError) {
+      console.error('❌ Order creation failed:', orderError)
       return NextResponse.json({ error: 'Failed to create order' }, { status: 500 })
     }
+    console.log('✅ Order created:', order.id)
 
-    // Create Stripe payment intent for sponsor to pay platform
-    // Platform holds the funds until payout is approved
-    const paymentIntent = await createPaymentIntent(
-      amount,
-      gig.kol.stripe_account_id,
-      platformFee
-    )
+    // Create Stripe payment intent - charge full amount to platform
+    // Payouts to KOL will be handled separately based on DB calculations
+    console.log('✅ Creating payment intent for amount:', amount)
+    const paymentIntent = await createPaymentIntent(amount)
+    console.log('✅ Payment intent created:', paymentIntent.id)
     
     // Update order with payment intent
     await supabase

@@ -94,9 +94,9 @@ export default function PaymentMethodSelector({
                 />
                 <div className="flex items-center space-x-3">
                   <div className="flex space-x-2">
-                    <img src="/api/placeholder/32/20" alt="Visa" className="h-5" />
-                    <img src="/api/placeholder/32/20" alt="Mastercard" className="h-5" />
-                    <img src="/api/placeholder/32/20" alt="Amex" className="h-5" />
+                    <div className="h-5 w-8 bg-blue-600 rounded text-white text-xs flex items-center justify-center font-bold">V</div>
+                    <div className="h-5 w-8 bg-red-600 rounded text-white text-xs flex items-center justify-center font-bold">MC</div>
+                    <div className="h-5 w-8 bg-green-600 rounded text-white text-xs flex items-center justify-center font-bold">AE</div>
                   </div>
                   <span className="font-medium">Credit/Debit Card</span>
                 </div>

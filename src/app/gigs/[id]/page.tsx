@@ -12,6 +12,7 @@ import GigSpecs from '@/components/gig/GigSpecs'
 import OrderSummary from '@/components/gig/OrderSummary'
 import KOLProfile from '@/components/gig/KOLProfile'
 import SocialMediaLinks from '@/components/gig/SocialMediaLinks'
+import ReviewsList from '@/components/reviews/ReviewsList'
 
 interface Gig {
   id: string
@@ -163,6 +164,7 @@ export default function GigDetailPage() {
           <GigSpecs gig={gig} />
           <SocialMediaLinks socialLinks={gig.kol.platforms || {}} kolName={gig.kol.full_name} />
           <KOLProfile kol={gig.kol} />
+          <ReviewsList kolId={gig.kol_id} showGigTitle={true} limit={5} />
         </div>
 
         {/* Right Column - Order Summary */}

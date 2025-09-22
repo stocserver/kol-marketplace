@@ -6,6 +6,8 @@ import { useRole } from '@/contexts/RoleContext'
 import { createClient } from '@/lib/supabase/client'
 import PaymentMethodSelector from '@/components/checkout/PaymentMethodSelector'
 import OrderReview from '@/components/checkout/OrderReview'
+import StripeProvider from '@/components/checkout/StripeProvider'
+import StripePaymentForm from '@/components/checkout/StripePaymentForm'
 
 // Mock gig data (same as gig detail page)
 const mockGig = {
@@ -25,7 +27,6 @@ const mockGig = {
 }
 
 interface CheckoutData {
-  fastDelivery: boolean
   specialRequirements: string
   paymentMethod: string
 }
@@ -37,13 +38,14 @@ export default function CheckoutPage() {
   const [gigLoading, setGigLoading] = useState(true)
   const supabase = createClient()
   const [checkoutData, setCheckoutData] = useState<CheckoutData>({
-    fastDelivery: false,
     specialRequirements: '',
     paymentMethod: 'card'
   })
   const [step, setStep] = useState(1) // 1: Review, 2: Payment, 3: Processing
   const [processing, setProcessing] = useState(false)
   const [paymentError, setPaymentError] = useState('')
+  const [clientSecret, setClientSecret] = useState<string>('')
+  const [orderId, setOrderId] = useState<string>('')
   const { theme } = useRole()
 
   useEffect(() => {
@@ -79,11 +81,9 @@ export default function CheckoutPage() {
         
         // Get checkout data from URL params
         const urlParams = new URLSearchParams(window.location.search)
-        const fastDelivery = urlParams.get('fastDelivery') === 'true'
         const requirements = urlParams.get('requirements') || ''
         
         setCheckoutData({
-          fastDelivery,
           specialRequirements: requirements,
           paymentMethod: 'card'
         })
@@ -100,9 +100,7 @@ export default function CheckoutPage() {
   }, [params.gigId, router, supabase])
 
   const basePrice = gig?.price || 0
-  const fastDeliveryPrice = checkoutData.fastDelivery && gig?.fast_delivery ? Math.floor(basePrice * 0.5) : 0
-  const serviceFee = Math.floor((basePrice + fastDeliveryPrice) * 0.05)
-  const totalPrice = basePrice + fastDeliveryPrice + serviceFee
+  const totalPrice = basePrice
   
   if (gigLoading) {
     return (
@@ -129,13 +127,13 @@ export default function CheckoutPage() {
     )
   }
 
-  const handlePayment = async () => {
+  const handleCreateOrder = async () => {
     setProcessing(true)
     setPaymentError('')
     setStep(3)
 
     try {
-      // Create real order via API
+      // Create order and get Stripe client secret
       const response = await fetch('/api/orders/create', {
         method: 'POST',
         headers: {
@@ -149,34 +147,52 @@ export default function CheckoutPage() {
 
       const result = await response.json()
 
-      if (response.ok && result.orderId) {
-        // For now, we'll simulate successful payment since Stripe isn't fully set up
-        // In production, you'd redirect to Stripe checkout or process payment here
+      if (response.ok && result.orderId && result.clientSecret) {
         console.log('Order created:', result)
-        
-        // Update order status to 'paid' to simulate successful payment
-        const { error: updateError } = await supabase
-          .from('orders')
-          .update({ status: 'paid' })
-          .eq('id', result.orderId)
-        
-        if (updateError) {
-          console.error('Error updating order status:', updateError)
-        }
-        
-        // Redirect to order page
-        router.push(`/orders/${result.orderId}?success=true`)
+        setOrderId(result.orderId)
+        setClientSecret(result.clientSecret)
+        setStep(2) // Go to Stripe payment step
       } else {
         setPaymentError(result.error || 'Order creation failed. Please try again.')
-        setStep(2)
+        setStep(1)
       }
     } catch (error) {
       console.error('Order creation error:', error)
       setPaymentError('Something went wrong. Please try again.')
-      setStep(2)
+      setStep(1)
     }
-    
+
     setProcessing(false)
+  }
+
+  const handlePaymentSuccess = async (paymentIntentId: string) => {
+    try {
+      // Update order status to paid
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({
+          status: 'paid',
+          stripe_payment_intent_id: paymentIntentId
+        })
+        .eq('id', orderId)
+
+      if (updateError) {
+        console.error('Error updating order status:', updateError)
+        setPaymentError('Payment succeeded but order update failed. Please contact support.')
+        return
+      }
+
+      // Redirect to order page
+      router.push(`/orders/${orderId}?success=true`)
+    } catch (error) {
+      console.error('Error updating order:', error)
+      setPaymentError('Payment succeeded but order update failed. Please contact support.')
+    }
+  }
+
+  const handlePaymentError = (error: string) => {
+    setPaymentError(error)
+    setStep(2) // Stay on payment step
   }
 
   const renderStep = () => {
@@ -189,23 +205,28 @@ export default function CheckoutPage() {
             onDataChange={setCheckoutData}
             totalPrice={totalPrice}
             basePrice={basePrice}
-            fastDeliveryPrice={fastDeliveryPrice}
-            serviceFee={serviceFee}
-            onContinue={() => setStep(2)}
+            onContinue={handleCreateOrder}
           />
         )
       
       case 2:
-        return (
-          <PaymentMethodSelector
-            paymentMethod={checkoutData.paymentMethod}
-            onMethodChange={(method) => setCheckoutData({...checkoutData, paymentMethod: method})}
-            totalPrice={totalPrice}
-            onPayment={handlePayment}
-            error={paymentError}
-            processing={processing}
-            onBack={() => setStep(1)}
-          />
+        return clientSecret ? (
+          <StripeProvider clientSecret={clientSecret}>
+            <StripePaymentForm
+              totalPrice={totalPrice}
+              onPaymentSuccess={handlePaymentSuccess}
+              onPaymentError={handlePaymentError}
+              processing={processing}
+              setProcessing={setProcessing}
+              onBack={() => setStep(1)}
+            />
+          </StripeProvider>
+        ) : (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-6"></div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Preparing Payment</h2>
+            <p className="text-gray-600">Setting up secure payment processing...</p>
+          </div>
         )
       
       case 3:
@@ -260,7 +281,7 @@ export default function CheckoutPage() {
                   />
                   <span>@{gig.kol.username}</span>
                 </div>
-                <div>Delivery: {checkoutData.fastDelivery ? gig.fast_delivery_days : gig.delivery_days} days</div>
+                <div>Delivery: {gig.delivery_days} days</div>
               </div>
             </div>
             <div className="text-right">

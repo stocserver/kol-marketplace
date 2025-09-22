@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import OrderTimeline from '@/components/order/OrderTimeline'
 import OrderChat from '@/components/order/OrderChat'
+import OrderReview from '@/components/order/OrderReview'
 
 // Order workflow statuses
 const ORDER_STATUSES = {
@@ -32,6 +33,11 @@ export default function OrderDetailPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [uploadMessage, setUploadMessage] = useState('')
   const [isUploading, setIsUploading] = useState(false)
+  const [isRefunding, setIsRefunding] = useState(false)
+  const [userProfile, setUserProfile] = useState<any>(null)
+  const [submissionMessage, setSubmissionMessage] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [existingReview, setExistingReview] = useState<any>(null)
   // const { theme } = useRole()
   const theme = {
     primary: 'bg-blue-600',
@@ -41,7 +47,7 @@ export default function OrderDetailPage() {
   const isSuccess = searchParams.get('success') === 'true'
 
   // Create comprehensive timeline with consistent workflow
-  const createTimeline = (currentStatus: string, timestamps: any, orderData: any) => {
+  const createTimeline = async (currentStatus: string, timestamps: any, orderData: any) => {
     const baseSteps = [
       {
         id: 1,
@@ -82,18 +88,118 @@ export default function OrderDetailPage() {
       })
     }
 
-    // Handle submission and revision logic
-    if (currentStatus === 'submitted') {
-      baseSteps.push({
-        id: 4,
-        type: 'work_submitted',
-        title: 'Work Submitted',
-        description: 'KOL has submitted the deliverables for review',
-        timestamp: timestamps.work_submitted || orderData.updated_at,
-        status: 'completed'
+    // Get file upload messages (still from order_messages for now)
+    const { data: fileMessages } = await supabase
+      .from('order_messages')
+      .select('*')
+      .eq('order_id', orderData.id)
+      .ilike('message', '%uploaded%')
+      .order('created_at', { ascending: true })
+
+    let nextId = 4
+
+    // Get all submissions from the new order_submissions table
+    const { data: submissions, error: submissionsError } = await supabase
+      .from('order_submissions')
+      .select('*')
+      .eq('order_id', orderData.id)
+      .order('submission_number', { ascending: true })
+
+    // Add all submission entries to timeline (if table exists)
+    if (!submissionsError && submissions && submissions.length > 0) {
+      submissions.forEach((submission) => {
+        const ordinal = submission.submission_number === 1 ? '1st' :
+                       submission.submission_number === 2 ? '2nd' :
+                       submission.submission_number === 3 ? '3rd' :
+                       `${submission.submission_number}th`
+
+        baseSteps.push({
+          id: nextId++,
+          type: 'work_submitted',
+          title: `Work Submitted (${ordinal} Submission)`,
+          description: `${orderData.kol?.full_name || orderData.kol?.username || 'KOL'} submitted the ${ordinal} version of work`,
+          timestamp: submission.submitted_at,
+          status: 'completed',
+          submissionData: {
+            number: submission.submission_number,
+            ordinal: ordinal,
+            message: submission.message,
+            sender: orderData.kol?.full_name || orderData.kol?.username || 'KOL'
+          }
+        })
       })
+    } else if (submissionsError) {
+      // Fallback: If submissions table doesn't exist, check if order status indicates submission
+      console.log('📊 Fallback: checking order data for submissions', {
+        status: currentStatus,
+        submission_count: orderData.submission_count,
+        last_submission_message: orderData.last_submission_message,
+        last_submission_at: orderData.last_submission_at
+      })
+
+      if (orderData.submission_count && orderData.submission_count > 0) {
+        const ordinal = orderData.submission_count === 1 ? '1st' :
+                       orderData.submission_count === 2 ? '2nd' :
+                       orderData.submission_count === 3 ? '3rd' :
+                       `${orderData.submission_count}th`
+
+        baseSteps.push({
+          id: nextId++,
+          type: 'work_submitted',
+          title: `Work Submitted (${ordinal} Submission)`,
+          description: `${orderData.kol?.full_name || orderData.kol?.username || 'KOL'} submitted the ${ordinal} version of work`,
+          timestamp: orderData.last_submission_at,
+          status: 'completed',
+          submissionData: {
+            number: orderData.submission_count,
+            ordinal: ordinal,
+            message: orderData.last_submission_message || 'Work submitted for review',
+            sender: orderData.kol?.full_name || orderData.kol?.username || 'KOL'
+          }
+        })
+      } else if (currentStatus === 'submitted') {
+        // If status is submitted but no submission data, show generic submission
+        baseSteps.push({
+          id: nextId++,
+          type: 'work_submitted',
+          title: 'Work Submitted (1st Submission)',
+          description: `${orderData.kol?.full_name || orderData.kol?.username || 'KOL'} submitted work for review`,
+          timestamp: orderData.updated_at,
+          status: 'completed',
+          submissionData: {
+            number: 1,
+            ordinal: '1st',
+            message: 'Work submitted for review',
+            sender: orderData.kol?.full_name || orderData.kol?.username || 'KOL'
+          }
+        })
+      }
+    }
+
+    // Add file upload entries
+    (fileMessages || []).forEach((message) => {
       baseSteps.push({
-        id: 5,
+        id: nextId++,
+        type: 'file_uploaded',
+        title: 'File Uploaded',
+        description: 'KOL uploaded a file',
+        timestamp: message.created_at,
+        status: 'completed',
+        fileData: {
+          message: message.message,
+          sender: message.sender_name
+        }
+      })
+    })
+
+    // Add current status indicators based on order state
+    const hasSubmissions = (!submissionsError && submissions && submissions.length > 0) ||
+                          (submissionsError && orderData.submission_count && orderData.submission_count > 0)
+
+    if (currentStatus === 'submitted' && hasSubmissions) {
+      // If submitted, show awaiting review after the latest submission
+      baseSteps.push({
+        id: nextId++,
         type: 'awaiting_review',
         title: 'Awaiting Review',
         description: 'Waiting for sponsor approval',
@@ -101,16 +207,9 @@ export default function OrderDetailPage() {
         status: 'current'
       })
     } else if (currentStatus === 'revision') {
+      // If revision requested, show revision workflow
       baseSteps.push({
-        id: 4,
-        type: 'work_submitted',
-        title: 'Work Submitted',
-        description: 'Initial work was submitted',
-        timestamp: timestamps.work_submitted || orderData.updated_at,
-        status: 'completed'
-      })
-      baseSteps.push({
-        id: 5,
+        id: nextId++,
         type: 'revision_requested',
         title: 'Revision Requested',
         description: 'Sponsor has requested changes to the work',
@@ -118,7 +217,7 @@ export default function OrderDetailPage() {
         status: 'completed'
       })
       baseSteps.push({
-        id: 6,
+        id: nextId++,
         type: 'revision_in_progress',
         title: 'Working on Revision',
         description: 'KOL is working on the requested changes',
@@ -126,16 +225,9 @@ export default function OrderDetailPage() {
         status: 'current'
       })
     } else if (['delivered', 'completed'].includes(currentStatus)) {
+      // If completed, show approval step
       baseSteps.push({
-        id: 4,
-        type: 'work_submitted',
-        title: 'Work Submitted',
-        description: 'KOL submitted the deliverables',
-        timestamp: timestamps.work_submitted || orderData.updated_at,
-        status: 'completed'
-      })
-      baseSteps.push({
-        id: 5,
+        id: nextId++,
         type: 'work_approved',
         title: 'Work Approved',
         description: 'Sponsor has approved the deliverables',
@@ -143,8 +235,9 @@ export default function OrderDetailPage() {
         status: 'completed'
       })
     } else if (currentStatus === 'in_progress') {
+      // If in progress, show work in progress
       baseSteps.push({
-        id: 4,
+        id: nextId++,
         type: 'work_in_progress',
         title: 'Work in Progress',
         description: 'KOL is working on your content',
@@ -256,7 +349,7 @@ export default function OrderDetailPage() {
 
         console.log('Final order data:', orderData)
 
-        const activities = createTimeline(orderData.status, {
+        const activities = await createTimeline(orderData.status, {
           order_created: orderData.created_at,
           payment_confirmed: orderData.created_at,
           work_started: orderData.updated_at,
@@ -291,6 +384,7 @@ export default function OrderDetailPage() {
 
     loadOrder()
     loadOrderFiles()
+    loadExistingReview()
 
     // Set up real-time subscription for order status changes
     const channel = supabase
@@ -308,21 +402,14 @@ export default function OrderDetailPage() {
           if (payload.new) {
             setOrder((currentOrder: any) => {
               if (!currentOrder) return currentOrder
-              
+
               const updatedOrder = { ...currentOrder, ...payload.new }
-              
-              // Recreate timeline with new status
-              const activities = createTimeline(payload.new.status, {
-                order_created: updatedOrder.created_at,
-                payment_confirmed: updatedOrder.created_at,
-                work_started: updatedOrder.updated_at,
-                work_submitted: updatedOrder.updated_at,
-                revision_requested: payload.new.status === 'revision' ? updatedOrder.updated_at : null,
-                work_approved: ['completed'].includes(payload.new.status) ? updatedOrder.updated_at : null,
-                order_completed: payload.new.status === 'completed' ? updatedOrder.updated_at : null
-              }, updatedOrder)
-              
-              return { ...updatedOrder, activities }
+
+              // For real-time updates, use simple timeline without dynamic submission counting
+              // The submission count will be updated when the user refreshes or navigates
+              const simpleActivities = currentOrder.activities || []
+
+              return { ...updatedOrder, activities: simpleActivities }
             })
           }
         }
@@ -336,6 +423,7 @@ export default function OrderDetailPage() {
 
   const loadOrderFiles = async () => {
     try {
+      // Check if order_files table exists and is accessible
       const { data: files, error } = await supabase
         .from('order_files')
         .select('*')
@@ -343,14 +431,46 @@ export default function OrderDetailPage() {
         .order('created_at', { ascending: false })
 
       if (error) {
-        console.error('Error loading order files:', error)
+        // Common Supabase errors for missing tables/permissions
+        if (error.code === 'PGRST116' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
+          console.info('Order files feature not available - table may not exist yet')
+        } else {
+          console.warn('Order files query failed:', error)
+        }
+        // Always set empty array as fallback
+        setUploadedFiles([])
       } else {
         setUploadedFiles(files || [])
       }
     } catch (error) {
-      console.error('Error loading order files:', error)
+      console.info('Order files feature unavailable:', error)
+      // Set empty array as fallback to prevent page crash
+      setUploadedFiles([])
     }
   }
+
+  const loadExistingReview = async () => {
+    try {
+      const { data: review, error } = await supabase
+        .from('reviews')
+        .select('id, rating, comment, kol_response, kol_response_at, created_at')
+        .eq('order_id', params.id)
+        .single()
+
+      if (error) {
+        if (error.code !== 'PGRST116') {
+          console.warn('Review query failed:', error)
+        }
+        setExistingReview(null)
+      } else {
+        setExistingReview(review)
+      }
+    } catch (error) {
+      console.info('Reviews feature unavailable:', error)
+      setExistingReview(null)
+    }
+  }
+
 
   const handleFileUpload = async () => {
     if (!selectedFile || !order) return
@@ -359,9 +479,13 @@ export default function OrderDetailPage() {
     try {
       const formData = new FormData()
       formData.append('file', selectedFile)
-      if (uploadMessage) {
-        formData.append('message', uploadMessage)
-      }
+
+      // Create a simple message for file upload
+      const fileMessage = uploadMessage
+        ? `📹 Uploaded ${selectedFile.name}. ${uploadMessage}`
+        : `📹 Uploaded ${selectedFile.name}.`
+
+      formData.append('message', fileMessage)
 
       const response = await fetch(`/api/orders/${order.id}/upload`, {
         method: 'POST',
@@ -374,14 +498,16 @@ export default function OrderDetailPage() {
         alert('File uploaded successfully!')
         setSelectedFile(null)
         setUploadMessage('')
-        
+
         // Clear file input
         const fileInput = document.querySelector('input[type=\"file\"]') as HTMLInputElement
         if (fileInput) fileInput.value = ''
-        
-        // Reload files and update order status to submitted
+
+        // Reload files
         await loadOrderFiles()
-        await updateOrderStatus('submitted')
+
+        // Note: Don't automatically change status to submitted when uploading files
+        // Let users choose when to submit via the standalone button
       } else {
         alert(result.error || 'Failed to upload file')
       }
@@ -393,8 +519,97 @@ export default function OrderDetailPage() {
     }
   }
 
-  const updateOrderStatus = async (newStatus: string) => {
+  const handleRefund = async () => {
+    if (!order || !confirm('Are you sure you want to request a refund? This action cannot be undone.')) {
+      return
+    }
+
+    setIsRefunding(true)
     try {
+      const response = await fetch(`/api/orders/${order.id}/refund`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          reason: 'requested_by_customer'
+        }),
+      })
+
+      const result = await response.json()
+
+      if (response.ok) {
+        alert(`Refund processed successfully! $${result.amount} will be returned to your payment method within 5-10 business days.`)
+        // Update order status locally
+        setOrder({ ...order, status: 'refunded' })
+      } else {
+        alert(result.error || 'Failed to process refund. Please contact support.')
+      }
+    } catch (error) {
+      console.error('Refund error:', error)
+      alert('An error occurred while processing the refund. Please try again.')
+    } finally {
+      setIsRefunding(false)
+    }
+  }
+
+  // Helper function to get ordinal numbers (1st, 2nd, 3rd, etc.)
+  const getOrdinal = (n: number): string => {
+    const suffixes = ['th', 'st', 'nd', 'rd']
+    const mod100 = n % 100
+    return n + (suffixes[(mod100 - 20) % 10] || suffixes[mod100] || suffixes[0])
+  }
+
+  // Helper function to count submissions by looking at submission messages
+  const getSubmissionCount = async (): Promise<number> => {
+    try {
+      // Get current submission count from order_submissions table
+      const { data: submissions, error } = await supabase
+        .from('order_submissions')
+        .select('submission_number')
+        .eq('order_id', order.id)
+        .order('submission_number', { ascending: false })
+        .limit(1)
+
+      if (error) {
+        console.warn('Could not get submission count:', error)
+        return 1
+      }
+
+      // Return the next submission number
+      return (submissions?.[0]?.submission_number || 0) + 1
+    } catch (error) {
+      console.warn('Error getting submission count:', error)
+      return 1
+    }
+  }
+
+  // Helper function to create chat message
+  const createChatMessage = async (message: string, senderName?: string) => {
+    try {
+      if (!user || !order) return
+
+      const { error } = await supabase
+        .from('order_messages')
+        .insert({
+          order_id: order.id,
+          sender_id: user.id,
+          sender_name: senderName || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+          message: message
+        })
+
+      if (error) {
+        console.error('Error creating chat message:', error)
+      }
+    } catch (error) {
+      console.error('Error creating chat message:', error)
+    }
+  }
+
+  const updateOrderStatus = async (newStatus: string, customMessage?: string) => {
+    try {
+      setIsSubmitting(true)
+
       if (!order || !order.id) {
         console.error('No order found or missing order ID')
         alert('Order not found. Please refresh the page.')
@@ -414,11 +629,35 @@ export default function OrderDetailPage() {
         userId: user.id
       })
 
+      // Get user profile for sender name
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, username')
+        .eq('id', user.id)
+        .single()
+
+      const senderName = profile?.full_name || profile?.username || 'User'
+
+      // Create appropriate chat message based on status change
+      let chatMessage = ''
+      let submissionCount = 1
+
+      if (newStatus === 'in_progress') {
+        chatMessage = '🚀 I have started working on your order! I\'ll keep you updated on the progress.'
+      } else if (newStatus === 'submitted') {
+        submissionCount = await getSubmissionCount()
+        // DON'T send any submission messages to chat - they appear in timeline only
+        chatMessage = '' // No chat message for submissions
+      } else if (newStatus === 'revision') {
+        chatMessage = '🔄 Thank you for the feedback! I will work on the requested revisions and submit an updated version soon.'
+      } else if (newStatus === 'completed') {
+        chatMessage = '🎉 Thank you for approving the work! It was a pleasure working with you. Feel free to reach out for future projects!'
+      }
+
+      // Update order status
       const { error, data } = await supabase
         .from('orders')
-        .update({ 
-          status: newStatus
-        })
+        .update({ status: newStatus })
         .eq('id', order.id)
         .select()
 
@@ -431,11 +670,49 @@ export default function OrderDetailPage() {
 
       console.log('Order updated successfully:', data)
 
+      // DON'T create any automatic chat messages - chat is only for manual conversation
+      // All status updates should only appear in timeline, not in chat
+
+      // For submissions, try to store in order_submissions table, fallback to order table
+      if (newStatus === 'submitted') {
+        try {
+          const submissionMessage = customMessage || 'Work submitted for review'
+
+          // Try to store in order_submissions table first
+          const { error: submissionError } = await supabase
+            .from('order_submissions')
+            .insert({
+              order_id: order.id,
+              submission_number: submissionCount,
+              message: submissionMessage,
+              submitted_by: user.id
+            })
+
+          if (submissionError) {
+            console.warn('order_submissions table not available, using fallback storage:', submissionError)
+
+            // Fallback: Store in order table for now
+            await supabase
+              .from('orders')
+              .update({
+                last_submission_message: submissionMessage,
+                last_submission_at: new Date().toISOString(),
+                submission_count: submissionCount
+              })
+              .eq('id', order.id)
+          } else {
+            console.log('✅ Submission stored successfully:', submissionCount)
+          }
+        } catch (error) {
+          console.warn('Could not store submission details:', error)
+        }
+      }
+
       // Update local state and refresh timeline
       const updatedOrder = { ...order, status: newStatus }
-      
+
       // Recreate timeline with new status
-      const activities = createTimeline(newStatus, {
+      const activities = await createTimeline(newStatus, {
         order_created: order.created_at,
         payment_confirmed: order.created_at,
         work_started: order.updated_at,
@@ -444,9 +721,9 @@ export default function OrderDetailPage() {
         work_approved: ['completed'].includes(newStatus) ? new Date().toISOString() : order.updated_at,
         order_completed: newStatus === 'completed' ? new Date().toISOString() : order.updated_at
       }, updatedOrder)
-      
+
       setOrder({ ...updatedOrder, activities })
-      
+
       // Show success message
       const statusMessages = {
         'in_progress': 'Work started successfully!',
@@ -454,12 +731,19 @@ export default function OrderDetailPage() {
         'completed': 'Order completed successfully!',
         'revision': 'Revision requested. KOL will be notified.'
       }
-      
+
       alert(statusMessages[newStatus] || 'Order status updated')
-      
+
+      // Clear submission message after successful submission
+      if (newStatus === 'submitted') {
+        setSubmissionMessage('')
+      }
+
     } catch (error) {
       console.error('Error updating order status:', error)
       alert('An unexpected error occurred. Please try again.')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -589,11 +873,34 @@ export default function OrderDetailPage() {
                   )}
                   
                   {(order.status === 'in_progress' || order.status === 'revision') && (
-                    <div className="space-y-3">
+                    <div className="space-y-4">
+                      {/* Submit Work Section */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Upload MP4 Video (Max 5MB)
-                        </label>
+                        <div className="mb-2">
+                          <span className="text-sm font-medium text-gray-700">Submit Work:</span>
+                        </div>
+                        <textarea
+                          value={submissionMessage}
+                          onChange={(e) => setSubmissionMessage(e.target.value)}
+                          placeholder="Enter your message, link, or description of the work completed (optional)..."
+                          rows={3}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm mb-2"
+                        />
+                        <button
+                          onClick={() => updateOrderStatus('submitted', submissionMessage.trim() || undefined)}
+                          disabled={isSubmitting}
+                          className={`w-full ${isSubmitting ? 'bg-gray-400 cursor-not-allowed' : theme.primary + ' ' + theme.primaryHover} text-white py-3 px-4 rounded-lg font-semibold`}
+                        >
+                          {isSubmitting ? 'Submitting...' : 'Submit'}
+                        </button>
+                      </div>
+
+                      {/* File Upload Section */}
+                      <div className="border-t pt-4">
+                        <div className="flex items-center mb-2">
+                          <span className="text-sm font-medium text-gray-700">Upload File (Optional)</span>
+                          <span className="text-xs text-gray-500 ml-2">(MP4, Max 5MB)</span>
+                        </div>
                         <input
                           type="file"
                           accept="video/mp4"
@@ -613,28 +920,30 @@ export default function OrderDetailPage() {
                               setSelectedFile(file)
                             }
                           }}
-                          className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                          className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 mb-2"
                         />
                         {selectedFile && (
-                          <p className="text-xs text-green-600 mt-1">
-                            Selected: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)}MB)
-                          </p>
+                          <>
+                            <p className="text-xs text-green-600 mb-2">
+                              Selected: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)}MB)
+                            </p>
+                            <textarea
+                              value={uploadMessage}
+                              onChange={(e) => setUploadMessage(e.target.value)}
+                              placeholder="Add a message with your file..."
+                              rows={2}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm mb-2"
+                            />
+                            <button
+                              onClick={handleFileUpload}
+                              disabled={isUploading}
+                              className={`w-full ${isUploading ? 'bg-gray-400 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-700'} text-white py-2 px-4 rounded-lg font-medium text-sm`}
+                            >
+                              {isUploading ? 'Uploading...' : 'Upload File'}
+                            </button>
+                          </>
                         )}
                       </div>
-                      <textarea
-                        value={uploadMessage}
-                        onChange={(e) => setUploadMessage(e.target.value)}
-                        placeholder={order.status === 'revision' ? 'Describe the changes you made...' : 'Add a message with your submission...'}
-                        rows={3}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                      />
-                      <button 
-                        onClick={handleFileUpload}
-                        disabled={!selectedFile || isUploading}
-                        className={`w-full ${!selectedFile || isUploading ? 'bg-gray-400 cursor-not-allowed' : theme.primary + ' ' + theme.primaryHover} text-white py-2 px-4 rounded-lg font-medium`}
-                      >
-                        {isUploading ? 'Uploading...' : (order.status === 'revision' ? 'Submit Revised Work' : 'Submit Work')}
-                      </button>
                     </div>
                   )}
                 </>
@@ -658,35 +967,26 @@ export default function OrderDetailPage() {
                 </>
               )}
               
-              {/* Common Actions */}
-              {uploadedFiles.length > 0 && (
-                <div className="border-t pt-3">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Uploaded Files</h4>
-                  <div className="space-y-2">
-                    {uploadedFiles.map((file) => (
-                      <div key={file.id} className="flex items-center justify-between text-xs">
-                        <span className="truncate max-w-[150px]" title={file.filename}>
-                          {file.filename}
-                        </span>
-                        <a 
-                          href={file.file_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="bg-blue-100 hover:bg-blue-200 text-blue-800 px-2 py-1 rounded font-medium"
-                        >
-                          Download
-                        </a>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
               
               <button className="w-full bg-red-100 hover:bg-red-200 text-red-700 py-2 px-4 rounded-lg font-medium">
                 Open Dispute
               </button>
             </div>
           </div>
+
+          {/* Order Review - Show for completed orders */}
+          {order.status === 'completed' && (
+            <OrderReview
+              orderId={order.id}
+              kolId={order.kol_id}
+              kolName={order.kol?.full_name || order.kol?.username || 'KOL'}
+              sponsorId={order.sponsor_id}
+              orderCompletedAt={order.updated_at}
+              currentUserId={user?.id}
+              userType={userProfile?.user_type || 'sponsor'}
+              existingReview={existingReview}
+            />
+          )}
 
           {/* Order Details */}
           <div className="bg-white rounded-lg p-6 shadow-sm border">

@@ -7,6 +7,7 @@ import { useRole } from '@/contexts/RoleContext'
 import { useAuth } from '@/hooks/useAuth'
 import { useFavorites } from '@/hooks/useFavorites'
 import { GENRE_CATEGORIES } from '@/lib/constants'
+import KOLRating from '@/components/reviews/KOLRating'
 
 interface Gig {
   id: string
@@ -68,10 +69,26 @@ const COUNTRIES = [
 ]
 
 const LANGUAGES = [
-  'English', 'Spanish', 'French', 'German', 'Italian', 'Portuguese', 
-  'Dutch', 'Swedish', 'Norwegian', 'Danish', 'Japanese', 'Korean', 
-  'Mandarin', 'Cantonese', 'Thai', 'Tagalog', 'Malay', 'Indonesian', 
+  'English', 'Spanish', 'French', 'German', 'Italian', 'Portuguese',
+  'Dutch', 'Swedish', 'Norwegian', 'Danish', 'Japanese', 'Korean',
+  'Mandarin', 'Cantonese', 'Thai', 'Tagalog', 'Malay', 'Indonesian',
   'Vietnamese', 'Hindi', 'Arabic'
+]
+
+const RATING_OPTIONS = [
+  { label: 'Any rating', value: '' },
+  { label: '4+ stars', value: '4' },
+  { label: '3+ stars', value: '3' },
+  { label: '2+ stars', value: '2' },
+  { label: '1+ stars', value: '1' }
+]
+
+const SORT_OPTIONS = [
+  { label: 'Default', value: 'default' },
+  { label: 'Price: Low to High', value: 'price_asc' },
+  { label: 'Price: High to Low', value: 'price_desc' },
+  { label: 'Best rated', value: 'rating' },
+  { label: 'Most reviewed', value: 'review_count' }
 ]
 
 // Note: Mock data removed - now using real database data
@@ -85,6 +102,8 @@ export default function MarketplacePage() {
   const [selectedViewRange, setSelectedViewRange] = useState('')
   const [selectedCountry, setSelectedCountry] = useState('')
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([])
+  const [selectedRating, setSelectedRating] = useState('')
+  const [sortBy, setSortBy] = useState('default')
   const [loading, setLoading] = useState(true)
   const { user } = useAuth()
   const { theme } = useRole()
@@ -160,6 +179,51 @@ export default function MarketplacePage() {
 
 
 
+  // Store KOL ratings data
+  const [kolRatings, setKolRatings] = useState<Record<string, { average: number; count: number }>>({})
+
+  // Fetch ratings for all KOLs
+  useEffect(() => {
+    const fetchAllRatings = async () => {
+      if (gigs.length === 0) return
+
+      const kolIds = [...new Set(gigs.map(gig => gig.kol_id))]
+      const ratingsData: Record<string, { average: number; count: number }> = {}
+
+      try {
+        const { data: reviews, error } = await supabase
+          .from('reviews')
+          .select('kol_id, rating')
+          .in('kol_id', kolIds)
+
+        if (error) {
+          console.warn('Error fetching ratings:', error)
+          return
+        }
+
+        // Calculate averages for each KOL
+        kolIds.forEach(kolId => {
+          const kolReviews = reviews.filter(review => review.kol_id === kolId)
+          if (kolReviews.length > 0) {
+            const average = kolReviews.reduce((sum, review) => sum + review.rating, 0) / kolReviews.length
+            ratingsData[kolId] = {
+              average: Math.round(average * 10) / 10,
+              count: kolReviews.length
+            }
+          } else {
+            ratingsData[kolId] = { average: 0, count: 0 }
+          }
+        })
+
+        setKolRatings(ratingsData)
+      } catch (error) {
+        console.warn('Error calculating ratings:', error)
+      }
+    }
+
+    fetchAllRatings()
+  }, [gigs, supabase])
+
   useEffect(() => {
     let filtered = gigs
 
@@ -204,8 +268,39 @@ export default function MarketplacePage() {
       )
     }
 
+    // Filter by rating
+    if (selectedRating) {
+      const minRating = parseInt(selectedRating)
+      filtered = filtered.filter(gig => {
+        const rating = kolRatings[gig.kol_id]
+        return rating && rating.average >= minRating
+      })
+    }
+
+    // Sort the results
+    if (sortBy !== 'default') {
+      filtered.sort((a, b) => {
+        switch (sortBy) {
+          case 'price_asc':
+            return Number(a.price) - Number(b.price) // Low to High: smaller numbers first
+          case 'price_desc':
+            return Number(b.price) - Number(a.price) // High to Low: larger numbers first
+          case 'rating':
+            const ratingA = kolRatings[a.kol_id]?.average || 0
+            const ratingB = kolRatings[b.kol_id]?.average || 0
+            return ratingB - ratingA
+          case 'review_count':
+            const countA = kolRatings[a.kol_id]?.count || 0
+            const countB = kolRatings[b.kol_id]?.count || 0
+            return countB - countA
+          default:
+            return 0 // No sorting for default
+        }
+      })
+    }
+
     setFilteredGigs(filtered)
-  }, [searchTerm, selectedCategory, selectedPlatforms, selectedViewRange, selectedCountry, selectedLanguages, gigs])
+  }, [searchTerm, selectedCategory, selectedPlatforms, selectedViewRange, selectedCountry, selectedLanguages, selectedRating, sortBy, gigs, kolRatings])
 
   if (loading) {
     return (
@@ -299,6 +394,8 @@ export default function MarketplacePage() {
                       setSelectedViewRange('')
                       setSelectedCountry('')
                       setSelectedLanguages([])
+                      setSelectedRating('')
+                      setSortBy('default')
                     }}
                     className="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-md transition-colors"
                   >
@@ -329,7 +426,7 @@ export default function MarketplacePage() {
               </div>
 
               {/* Language Selection */}
-              <div>
+              <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-3">Languages</label>
                 <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-2 bg-gray-50 rounded-lg border">
                   {LANGUAGES.map(language => (
@@ -347,10 +444,42 @@ export default function MarketplacePage() {
                   ))}
                 </div>
               </div>
+
+              {/* Rating Filter */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-3">Minimum Rating</label>
+                <select
+                  value={selectedRating}
+                  onChange={(e) => setSelectedRating(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  {RATING_OPTIONS.map(option => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Sort Options */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">Sort By</label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  {SORT_OPTIONS.map(option => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {/* Active Filters Bar */}
-            {(selectedCategory || selectedPlatforms.length > 0 || selectedViewRange || selectedCountry || selectedLanguages.length > 0) && (
+            {(selectedCategory || selectedPlatforms.length > 0 || selectedViewRange || selectedCountry || selectedLanguages.length > 0 || selectedRating) && (
               <div className="p-4 bg-gray-50 border-t">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-sm font-medium text-gray-600">Active filters:</span>
@@ -413,6 +542,17 @@ export default function MarketplacePage() {
                       </button>
                     </span>
                   ))}
+                  {selectedRating && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-500 text-white">
+                      ⭐ {selectedRating}+ stars
+                      <button
+                        onClick={() => setSelectedRating('')}
+                        className="ml-2 text-yellow-200 hover:text-white"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  )}
                 </div>
               </div>
             )}
@@ -455,15 +595,17 @@ export default function MarketplacePage() {
                   {/* Clickable Gig Image */}
                   <Link href={`/gigs/${gig.id}`}>
                     <div className="aspect-[4/3] bg-gray-200 relative cursor-pointer">
-                      <img
-                        src={gig.preview_image_url || '/api/placeholder/300/225'}
-                        alt={gig.title}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement
-                          target.src = '/api/placeholder/300/225'
-                        }}
-                      />
+                      {gig.preview_image_url ? (
+                        <img
+                          src={gig.preview_image_url}
+                          alt={gig.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-300 flex items-center justify-center">
+                          <span className="text-gray-500 text-sm">No image</span>
+                        </div>
+                      )}
                       {/* Category Badge */}
                       <div className="absolute top-2 left-2">
                         <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-white bg-opacity-90 text-gray-800">
@@ -542,6 +684,11 @@ export default function MarketplacePage() {
                           +{gig.kol.languages.length - 2}
                         </span>
                       )}
+                    </div>
+
+                    {/* Rating */}
+                    <div className="mb-2">
+                      <KOLRating kolId={gig.kol_id} size="sm" />
                     </div>
 
                     {/* Stats Row */}

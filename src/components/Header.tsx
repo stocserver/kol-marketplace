@@ -28,7 +28,7 @@ export default function Header() {
           <div className="flex justify-between items-center h-16">
             <div className="flex-shrink-0">
               <Link href="/" className="text-xl font-bold text-gray-900">
-                KOL Marketplace
+                Sponsor X
               </Link>
             </div>
             <div className="animate-pulse bg-gray-200 h-8 w-20 rounded"></div>
@@ -45,7 +45,7 @@ export default function Header() {
           <div className="flex items-center space-x-4 sm:space-x-6 lg:space-x-8">
             <div className="flex-shrink-0">
               <Link href="/" className="text-xl font-bold text-white">
-                KOL Marketplace
+                Sponsor X
               </Link>
             </div>
             

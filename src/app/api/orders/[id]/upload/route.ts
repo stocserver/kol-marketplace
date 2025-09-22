@@ -112,13 +112,22 @@ export async function POST(
 
     // Add message to order chat if provided
     if (message) {
+      // Get user profile for proper sender name
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, username')
+        .eq('id', user.id)
+        .single()
+
+      const senderName = profile?.full_name || profile?.username || 'User'
+
       await supabase
         .from('order_messages')
         .insert({
           order_id: params.id,
           sender_id: user.id,
           message: message,
-          sender_name: user.user_metadata?.full_name || 'User'
+          sender_name: senderName
         })
     }
 
