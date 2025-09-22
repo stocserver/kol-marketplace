@@ -1,9 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { useRole } from '@/contexts/RoleContext'
 import ConversationBox from '@/components/conversation/ConversationBox'
 
 export default function MessagesPage() {
@@ -11,8 +10,6 @@ export default function MessagesPage() {
   const [unreadConversations, setUnreadConversations] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [startNewChat, setStartNewChat] = useState<string | null>(null)
-  const { theme } = useRole()
-  const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
 

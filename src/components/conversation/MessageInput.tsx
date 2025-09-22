@@ -4,7 +4,13 @@ interface MessageInputProps {
   sendingMessage: boolean
   onSendMessage: () => void
   onKeyPress: (e: React.KeyboardEvent) => void
-  theme: any
+  theme: {
+    primary: string
+    primaryHover: string
+    accent: string
+    gradient: string
+    text: string
+  }
 }
 
 export default function MessageInput({

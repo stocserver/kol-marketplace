@@ -23,7 +23,7 @@ interface OrderSummaryProps {
 export default function OrderSummary({ gig }: OrderSummaryProps) {
   const [fastDelivery, setFastDelivery] = useState(false)
   const [specialRequirements, setSpecialRequirements] = useState('')
-  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [currentUser, setCurrentUser] = useState<{ id: string; email?: string } | null>(null)
   const [isOwnGig, setIsOwnGig] = useState(false)
   const { theme } = useRole()
   const router = useRouter()

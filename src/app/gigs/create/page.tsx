@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useRole } from '@/contexts/RoleContext'
 import { useAuth } from '@/hooks/useAuth'
-import { PLATFORM_CATEGORIES, ALL_PLATFORMS, GENRE_CATEGORIES, CONTENT_TYPES } from '@/lib/constants'
+import { ALL_PLATFORMS, GENRE_CATEGORIES, CONTENT_TYPES } from '@/lib/constants'
 
 export default function CreateGigPage() {
   const [formData, setFormData] = useState({
@@ -274,7 +274,7 @@ export default function CreateGigPage() {
         .map(item => item.trim().replace(/^[•\-\*]\s*/, ''))
         .filter(item => item.length > 0)
 
-      let imageUrls: string[] = []
+      const imageUrls: string[] = []
 
       // Upload images to Supabase storage if files are selected
       if (imageFiles.length > 0) {
@@ -618,7 +618,7 @@ export default function CreateGigPage() {
             {/* Deliverables */}
             <div>
               <label htmlFor="deliverables" className="block text-sm font-medium text-gray-700 mb-3">
-                What You'll Deliver *
+                What You&apos;ll Deliver *
               </label>
               <textarea
                 id="deliverables"
@@ -805,8 +805,24 @@ export default function CreateGigPage() {
 }
 
 // Gig Preview Component
+interface GigFormData {
+  title: string
+  description: string
+  price: string
+  delivery_days: string
+  platform: string
+  content_type: string
+  genre_category: string
+  deliverables: string
+  requirements: string
+  revisions_included: string
+  fast_delivery: boolean
+  fast_delivery_days: string
+  preview_image_url: string
+}
+
 function GigPreview({ formData, imagePreviewUrls }: {
-  formData: any
+  formData: GigFormData
   imagePreviewUrls: string[]
 }) {
   // Create genre map from constants

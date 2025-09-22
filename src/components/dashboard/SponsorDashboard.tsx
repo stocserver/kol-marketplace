@@ -10,7 +10,7 @@ interface SponsorDashboardProps {
 
 export default function SponsorDashboard({ user }: SponsorDashboardProps) {
   const [activeTab, setActiveTab] = useState('orders')
-  const { sponsorOrders, loading: ordersLoading, updateOrderStatus } = useOrders()
+  const { sponsorOrders, loading: ordersLoading } = useOrders()
   
   // Calculate stats directly from the fetched orders (same source as the order list)
   const stats = {

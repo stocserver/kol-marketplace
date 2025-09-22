@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useParams } from 'next/navigation'
 import { useRole } from '@/contexts/RoleContext'
-import { PLATFORM_CATEGORIES, ALL_PLATFORMS, GENRE_CATEGORIES, CONTENT_TYPES } from '@/lib/constants'
+import { ALL_PLATFORMS, GENRE_CATEGORIES, CONTENT_TYPES } from '@/lib/constants'
 
 export default function EditGigPage() {
   const params = useParams()

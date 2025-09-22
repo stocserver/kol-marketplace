@@ -3,21 +3,19 @@
 import { useState, useEffect } from 'react'
 import { useRole } from '@/contexts/RoleContext'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 
 interface StripeAccount {
   connected: boolean
   account_id: string | null
   charges_enabled: boolean
   details_submitted: boolean
-  requirements?: any
+  requirements?: Record<string, unknown>
 }
 
 export default function PaymentSettingsPage() {
   const { currentRole } = useRole()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const supabase = createClient()
   
   const [connecting, setConnecting] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -103,8 +101,8 @@ export default function PaymentSettingsPage() {
         await loadStripeStatus()
       }
       
-    } catch (err: any) {
-      setError(err.message || 'Failed to connect Stripe account')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to connect Stripe account')
       console.error('Stripe Connect error:', err)
     } finally {
       setConnecting(false)
@@ -129,8 +127,8 @@ export default function PaymentSettingsPage() {
         throw new Error(data.error)
       }
       
-    } catch (err: any) {
-      setError(err.message || 'Failed to start OAuth connection')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to start OAuth connection')
       console.error('Stripe OAuth error:', err)
     } finally {
       setConnecting(false)
@@ -153,7 +151,7 @@ export default function PaymentSettingsPage() {
       } else {
         setError(data.error || 'Failed to create management link')
       }
-    } catch (err) {
+    } catch {
       setError('Failed to access account management')
     } finally {
       setConnecting(false)

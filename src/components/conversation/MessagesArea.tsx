@@ -35,7 +35,7 @@ interface MessagesAreaProps {
   selectedConversation: string | null
   conversations: Conversation[]
   messages: Message[]
-  currentUser: any
+  currentUser: { id: string; username: string; full_name: string } | null
   newMessage: string
   setNewMessage: (message: string) => void
   sendingMessage: boolean
@@ -48,8 +48,8 @@ interface MessagesAreaProps {
   hasMoreMessages: boolean
   loadingOlderMessages: boolean
   onLoadOlderMessages: () => void
-  theme: any
-  newChatRecipient?: any
+  theme: { primary: string; primaryHover: string; accent: string; gradient: string; text: string }
+  newChatRecipient?: { id: string; username: string; full_name: string } | null
 }
 
 import { useEffect } from 'react'

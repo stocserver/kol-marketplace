@@ -4,27 +4,10 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useRole } from '@/contexts/RoleContext'
 import { createClient } from '@/lib/supabase/client'
-import PaymentMethodSelector from '@/components/checkout/PaymentMethodSelector'
 import OrderReview from '@/components/checkout/OrderReview'
 import StripeProvider from '@/components/checkout/StripeProvider'
 import StripePaymentForm from '@/components/checkout/StripePaymentForm'
 
-// Mock gig data (same as gig detail page)
-const mockGig = {
-  id: '1',
-  title: 'Instagram Reel + Story Package - Fashion Content Creation',
-  price: 299,
-  delivery_days: 3,
-  fast_delivery: true,
-  fast_delivery_days: 1,
-  preview_image_url: 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=500',
-  kol: {
-    id: 'kol1',
-    username: 'fashionista_emma',
-    full_name: 'Emma Rodriguez',
-    profile_image: 'https://images.unsplash.com/photo-1494790108755-2616b352caf1?w=150',
-  }
-}
 
 interface CheckoutData {
   specialRequirements: string
@@ -34,7 +17,7 @@ interface CheckoutData {
 export default function CheckoutPage() {
   const params = useParams()
   const router = useRouter()
-  const [gig, setGig] = useState<any>(null)
+  const [gig, setGig] = useState<typeof mockGig | null>(null)
   const [gigLoading, setGigLoading] = useState(true)
   const supabase = createClient()
   const [checkoutData, setCheckoutData] = useState<CheckoutData>({
@@ -43,10 +26,8 @@ export default function CheckoutPage() {
   })
   const [step, setStep] = useState(1) // 1: Review, 2: Payment, 3: Processing
   const [processing, setProcessing] = useState(false)
-  const [paymentError, setPaymentError] = useState('')
   const [clientSecret, setClientSecret] = useState<string>('')
   const [orderId, setOrderId] = useState<string>('')
-  const { theme } = useRole()
 
   useEffect(() => {
     const loadGigAndCheckoutData = async () => {

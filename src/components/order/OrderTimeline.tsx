@@ -27,10 +27,9 @@ interface OrderFile {
 
 interface OrderTimelineProps {
   activities: Activity[]
-  orderFiles?: OrderFile[]
 }
 
-export default function OrderTimeline({ activities, orderFiles = [] }: OrderTimelineProps) {
+export default function OrderTimeline({ activities }: OrderTimelineProps) {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'completed':

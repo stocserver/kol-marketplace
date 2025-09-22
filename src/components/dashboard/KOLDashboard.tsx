@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useOrders } from '@/hooks/useOrders'
-import { createClient } from '@/lib/supabase/client'
 
 interface KOLDashboardProps {
   user: any
@@ -14,7 +13,6 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
   const { kolOrders, loading: ordersLoading, updateOrderStatus } = useOrders()
   const [payoutRequests, setPayoutRequests] = useState<any[]>([])
   const [payoutLoading, setPayoutLoading] = useState(false)
-  const supabase = createClient()
   
   // Calculate stats directly from the fetched orders (same source as the order list)
   const stats = {

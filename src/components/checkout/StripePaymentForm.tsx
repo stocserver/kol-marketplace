@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js'
+import type { StripePaymentElement } from '@stripe/stripe-js'
 
 interface StripePaymentFormProps {
   totalPrice: number
@@ -23,7 +24,7 @@ export default function StripePaymentForm({
   const stripe = useStripe()
   const elements = useElements()
   const [error, setError] = useState<string>('')
-  const [paymentElement, setPaymentElement] = useState<any>(null)
+  const [paymentElement, setPaymentElement] = useState<StripePaymentElement | null>(null)
 
   useEffect(() => {
     if (elements) {
@@ -159,8 +160,6 @@ export default function StripePaymentForm({
                           setTimeout(() => {
                             // Create and dispatch keyboard events for test card number
                             const testCardNumber = '4242424242424242'
-                            const testExpiry = '1225' // December 2025
-                            const testCVC = '123'
 
                             // Dispatch events to simulate typing
                             testCardNumber.split('').forEach((char, index) => {

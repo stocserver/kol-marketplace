@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
       .eq('id', userId)
       .single()
 
-    let updateData: any = {}
+    const updateData: Record<string, unknown> = {}
     
     // Check if columns exist and update accordingly
     if (profile && 'stripe_account_id' in profile) {

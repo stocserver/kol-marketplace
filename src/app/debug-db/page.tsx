@@ -4,13 +4,13 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 export default function DatabaseDebugPage() {
-  const [results, setResults] = useState<any>({})
+  const [results, setResults] = useState<Record<string, unknown>>({})
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
   useEffect(() => {
     const checkDatabase = async () => {
-      const checks: any = {}
+      const checks: Record<string, unknown> = {}
       
       try {
         // Check if tables exist by trying to query them
@@ -93,11 +93,11 @@ export default function DatabaseDebugPage() {
               result: ratingTest
             }
           }
-        } catch (err: any) {
+        } catch (err: unknown) {
           checks.functions = {
             get_user_average_rating: {
               exists: false,
-              error: err.message
+              error: err instanceof Error ? err.message : 'Unknown error'
             }
           }
         }
@@ -115,9 +115,9 @@ export default function DatabaseDebugPage() {
         console.log('📊 Database check results:', checks)
         setResults(checks)
         
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('💥 Database check failed:', error)
-        setResults({ error: error.message })
+        setResults({ error: error instanceof Error ? error.message : 'Unknown error' })
       } finally {
         setLoading(false)
       }
@@ -173,9 +173,9 @@ export default function DatabaseDebugPage() {
         window.location.reload() // Refresh to see updated counts
       }
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('💥 Order creation test failed:', error)
-      alert(`Test failed: ${error.message}`)
+      alert(`Test failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
@@ -208,7 +208,7 @@ export default function DatabaseDebugPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {Object.entries(results).map(([tableName, data]: [string, any]) => (
+          {Object.entries(results).map(([tableName, data]: [string, Record<string, unknown>]) => (
             <div key={tableName} className="bg-white rounded-lg shadow p-6">
               <h2 className="text-lg font-semibold mb-3 flex items-center">
                 {data.exists ? '✅' : '❌'} {tableName}
@@ -243,7 +243,7 @@ export default function DatabaseDebugPage() {
               
               {tableName === 'functions' && (
                 <div className="mt-3">
-                  {Object.entries(data).map(([funcName, funcData]: [string, any]) => (
+                  {Object.entries(data).map(([funcName, funcData]: [string, Record<string, unknown>]) => (
                     <div key={funcName} className="mb-2">
                       <p className="text-sm">
                         <strong>{funcName}:</strong> {funcData.exists ? '✅' : '❌'}

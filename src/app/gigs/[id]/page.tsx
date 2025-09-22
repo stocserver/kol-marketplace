@@ -3,8 +3,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { useRole } from '@/contexts/RoleContext'
-import { useAuth } from '@/hooks/useAuth'
 import GigHeader from '@/components/gig/GigHeader'
 import GigGallery from '@/components/gig/GigGallery'
 import GigDescription from '@/components/gig/GigDescription'
@@ -44,7 +42,7 @@ interface Gig {
     languages?: string[]
     followers?: number
     avg_views_per_content?: number
-    platforms?: any
+    platforms?: Record<string, unknown>
   }
 }
 
@@ -54,7 +52,6 @@ export default function GigDetailPage() {
   const [gig, setGig] = useState<Gig | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const { theme } = useRole()
   const supabase = createClient()
 
   useEffect(() => {

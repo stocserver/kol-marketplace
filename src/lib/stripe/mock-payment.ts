@@ -104,7 +104,7 @@ export const mockGetPaymentStatus = async (paymentIntentId: string) => {
 }
 
 // Mock webhook handler (for real implementation)
-export const mockHandleStripeWebhook = async (signature: string, body: string) => {
+export const mockHandleStripeWebhook = async (signature: string) => {
   console.log('📨 Mock Stripe Webhook Received')
   console.log('Signature:', signature.substring(0, 20) + '...')
   

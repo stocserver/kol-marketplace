@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { useAuth } from '@/hooks/useAuth'
 import { useFavorites } from '@/hooks/useFavorites'
 import { useRole } from '@/contexts/RoleContext'
-import { GENRE_CATEGORIES } from '@/lib/constants'
 
 interface Gig {
   id: string
@@ -41,7 +40,7 @@ const PLATFORM_CONFIG = [
 
 export default function FavoritesPage() {
   const { user } = useAuth()
-  const { getFavoriteGigs, toggleFavorite, isFavorited, loading } = useFavorites()
+  const { getFavoriteGigs, toggleFavorite, loading } = useFavorites()
   const { theme } = useRole()
   const [favoriteGigs, setFavoriteGigs] = useState<Gig[]>([])
   const [pageLoading, setPageLoading] = useState(true)

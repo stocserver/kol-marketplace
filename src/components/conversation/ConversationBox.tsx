@@ -39,7 +39,7 @@ interface Message {
 interface ConversationBoxProps {
   unreadConversations: Set<string>
   setUnreadConversations: (value: Set<string>) => void
-  currentUser: any
+  currentUser: { id: string; username: string; full_name: string } | null
   startNewChat?: string | null
   setStartNewChat?: (value: string | null) => void
 }
@@ -60,7 +60,7 @@ export default function ConversationBox({
   const [shouldAutoScroll, setShouldAutoScroll] = useState(false)
   const [hasMoreMessages, setHasMoreMessages] = useState(false)
   const [loadingOlderMessages, setLoadingOlderMessages] = useState(false)
-  const [newChatRecipient, setNewChatRecipient] = useState<any>(null)
+  const [newChatRecipient, setNewChatRecipient] = useState<{ id: string; username: string; full_name: string } | null>(null)
   const { theme } = useRole()
   const supabase = createClient()
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -168,7 +168,7 @@ export default function ConversationBox({
         // Check for unread messages by comparing with last seen message timestamps
         const currentUnread = new Set<string>()
         
-        newConversations.forEach((conv: any) => {
+        newConversations.forEach((conv: Conversation) => {
           if (conv.last_message && 
               conv.last_message.sender_id !== currentUser?.id && 
               conv.id !== selectedConversation) {

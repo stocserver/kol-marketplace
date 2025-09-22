@@ -9,7 +9,7 @@ export default function TestUploadPage() {
   const [uploading, setUploading] = useState(false)
   const [result, setResult] = useState<string>('')
   const [imageUrl, setImageUrl] = useState<string>('')
-  const [debug, setDebug] = useState<any>({})
+  const [debug, setDebug] = useState<Record<string, unknown>>({})
   
   const { user } = useAuth()
   const supabase = createClient()
@@ -111,9 +111,9 @@ export default function TestUploadPage() {
         setResult(prev => prev + `\n🌐 Public URL: ${urlData.publicUrl}`)
       }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Test upload error:', error)
-      setResult(prev => prev + `\n💥 Exception: ${error.message}`)
+      setResult(prev => prev + `\n💥 Exception: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setUploading(false)
     }
@@ -143,8 +143,8 @@ export default function TestUploadPage() {
         setResult(prev => prev + `\n✅ Can access gig-images bucket. Files: ${files.length}`)
       }
 
-    } catch (error: any) {
-      setResult(prev => prev + `\n💥 Bucket test exception: ${error.message}`)
+    } catch (error: unknown) {
+      setResult(prev => prev + `\n💥 Bucket test exception: ${error instanceof Error ? error.message : 'Unknown error'}`
     }
   }
 

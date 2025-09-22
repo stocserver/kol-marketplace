@@ -1,22 +1,22 @@
+import { Gig } from '@/types'
+
 interface OrderReviewProps {
-  gig: any
+  gig: Gig
   checkoutData: {
     specialRequirements: string
     paymentMethod: string
   }
-  onDataChange: (data: any) => void
+  onDataChange: (data: { specialRequirements: string; paymentMethod: string }) => void
   totalPrice: number
-  basePrice: number
   onContinue: () => void
 }
 
-export default function OrderReview({ 
-  gig, 
-  checkoutData, 
-  onDataChange, 
-  totalPrice, 
-  basePrice, 
-  onContinue 
+export default function OrderReview({
+  gig,
+  checkoutData,
+  onDataChange,
+  totalPrice,
+  onContinue
 }: OrderReviewProps) {
   return (
     <div className="p-8">
@@ -66,7 +66,7 @@ export default function OrderReview({
             <h4 className="font-semibold text-blue-900 mb-2">Order Terms</h4>
             <ul className="text-sm text-blue-800 space-y-1">
               <li>• Work will begin once payment is confirmed</li>
-              <li>• You'll receive updates throughout the process</li>
+              <li>• You&apos;ll receive updates throughout the process</li>
               <li>• Revisions are included as specified in the gig</li>
               <li>• Final files will be delivered via the platform</li>
             </ul>

@@ -17,12 +17,12 @@ export async function GET() {
       connectEnabled: true
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Stripe Connect test error:', error)
     
     return NextResponse.json({
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : 'Unknown error',
       connectEnabled: false,
       helpUrl: 'https://dashboard.stripe.com/connect/overview'
     }, { status: 400 })

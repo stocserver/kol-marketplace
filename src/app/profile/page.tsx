@@ -150,7 +150,7 @@ export default function ProfilePage() {
       if (!user) return
 
       // Start with basic fields only, then progressively add enhanced fields
-      let profileData: {
+      const profileData: {
         id: string
         full_name: string
         user_type: 'kol' | 'sponsor'
@@ -158,7 +158,7 @@ export default function ProfilePage() {
         bio?: string
         country?: string
         languages?: string[]
-        [key: string]: any
+        [key: string]: unknown
       } = {
         id: user.id,
         full_name: formData.full_name,

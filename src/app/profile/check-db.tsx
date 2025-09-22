@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { Profile } from '@/types'
 
 export default function CheckDbPage() {
-  const [profileData, setProfileData] = useState<any>(null)
+  const [profileData, setProfileData] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>('')
   const supabase = createClient()

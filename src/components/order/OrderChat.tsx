@@ -5,7 +5,6 @@ import { createClient } from '@/lib/supabase/client'
 
 interface OrderChatProps {
   orderId: string
-  sellerId: string
 }
 
 interface Message {
@@ -17,10 +16,10 @@ interface Message {
   created_at: string
 }
 
-export default function OrderChat({ orderId, sellerId }: OrderChatProps) {
+export default function OrderChat({ orderId }: OrderChatProps) {
   const [message, setMessage] = useState('')
   const [messages, setMessages] = useState<Message[]>([])
-  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [currentUser, setCurrentUser] = useState<{ id: string; email?: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 

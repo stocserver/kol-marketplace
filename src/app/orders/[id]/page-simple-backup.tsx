@@ -7,7 +7,7 @@ export default function SimpleOrderPage() {
   const params = useParams()
   const router = useRouter()
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [error] = useState('')
 
   useEffect(() => {
     console.log('SimpleOrderPage mounted with params:', params)

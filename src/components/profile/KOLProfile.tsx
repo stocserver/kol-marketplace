@@ -4,7 +4,6 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
-import { useRole } from '@/contexts/RoleContext'
 
 interface KOLProfileProps {
   user: any
@@ -12,7 +11,6 @@ interface KOLProfileProps {
 
 export default function KOLProfile({ user }: KOLProfileProps) {
   const [activeTab, setActiveTab] = useState('gigs')
-  const { theme } = useRole()
   const { user: currentUser } = useAuth()
   const router = useRouter()
 
@@ -268,7 +266,7 @@ export default function KOLProfile({ user }: KOLProfileProps) {
                                     </svg>
                                   ))}
                                 </div>
-                                <span className="text-sm text-gray-600">for "{review.order_title}"</span>
+                                <span className="text-sm text-gray-600">for &quot;{review.order_title}&quot;</span>
                               </div>
                               
                               <p className="text-gray-700">{review.comment}</p>

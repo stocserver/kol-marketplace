@@ -3,17 +3,15 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { useRole } from '@/contexts/RoleContext'
-import { useAuth } from '@/hooks/useAuth'
 import KOLProfile from '@/components/profile/KOLProfile'
 import SponsorProfile from '@/components/profile/SponsorProfile'
+import { Profile } from '@/types'
 
 export default function ProfilePage() {
   const params = useParams()
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>('')
-  const { theme } = useRole()
   const supabase = createClient()
 
   useEffect(() => {

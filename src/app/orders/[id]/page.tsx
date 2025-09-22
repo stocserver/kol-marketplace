@@ -8,6 +8,28 @@ import { createClient } from '@/lib/supabase/client'
 import OrderTimeline from '@/components/order/OrderTimeline'
 import OrderChat from '@/components/order/OrderChat'
 import OrderReview from '@/components/order/OrderReview'
+import { Order, Profile } from '@/types'
+
+interface User {
+  id: string
+  email?: string
+}
+
+interface OrderFile {
+  id: string
+  filename: string
+  file_url: string
+  file_size: number
+  created_at: string
+}
+
+interface Review {
+  id: string
+  order_id: string
+  rating: number
+  comment?: string
+  created_at: string
+}
 
 // Order workflow statuses
 const ORDER_STATUSES = {
@@ -25,19 +47,18 @@ export default function OrderDetailPage() {
   const params = useParams()
   const searchParams = useSearchParams()
   const router = useRouter()
-  const [order, setOrder] = useState<any>(null)
-  const [user, setUser] = useState<any>(null)
+  const [order, setOrder] = useState<Order | null>(null)
+  const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [uploadedFiles, setUploadedFiles] = useState<any[]>([])
+  const [uploadedFiles, setUploadedFiles] = useState<OrderFile[]>([])
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [uploadMessage, setUploadMessage] = useState('')
   const [isUploading, setIsUploading] = useState(false)
-  const [isRefunding, setIsRefunding] = useState(false)
-  const [userProfile, setUserProfile] = useState<any>(null)
+  const [userProfile] = useState<Profile | null>(null)
   const [submissionMessage, setSubmissionMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [existingReview, setExistingReview] = useState<any>(null)
+  const [existingReview, setExistingReview] = useState<Review | null>(null)
   // const { theme } = useRole()
   const theme = {
     primary: 'bg-blue-600',
@@ -47,7 +68,7 @@ export default function OrderDetailPage() {
   const isSuccess = searchParams.get('success') === 'true'
 
   // Create comprehensive timeline with consistent workflow
-  const createTimeline = async (currentStatus: string, timestamps: any, orderData: any) => {
+  const createTimeline = async (currentStatus: string, timestamps: Record<string, unknown>, orderData: Order) => {
     const baseSteps = [
       {
         id: 1,
@@ -400,7 +421,7 @@ export default function OrderDetailPage() {
         (payload) => {
           console.log('Order updated:', payload)
           if (payload.new) {
-            setOrder((currentOrder: any) => {
+            setOrder((currentOrder: Order | null) => {
               if (!currentOrder) return currentOrder
 
               const updatedOrder = { ...currentOrder, ...payload.new }
@@ -519,46 +540,7 @@ export default function OrderDetailPage() {
     }
   }
 
-  const handleRefund = async () => {
-    if (!order || !confirm('Are you sure you want to request a refund? This action cannot be undone.')) {
-      return
-    }
 
-    setIsRefunding(true)
-    try {
-      const response = await fetch(`/api/orders/${order.id}/refund`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          reason: 'requested_by_customer'
-        }),
-      })
-
-      const result = await response.json()
-
-      if (response.ok) {
-        alert(`Refund processed successfully! $${result.amount} will be returned to your payment method within 5-10 business days.`)
-        // Update order status locally
-        setOrder({ ...order, status: 'refunded' })
-      } else {
-        alert(result.error || 'Failed to process refund. Please contact support.')
-      }
-    } catch (error) {
-      console.error('Refund error:', error)
-      alert('An error occurred while processing the refund. Please try again.')
-    } finally {
-      setIsRefunding(false)
-    }
-  }
-
-  // Helper function to get ordinal numbers (1st, 2nd, 3rd, etc.)
-  const getOrdinal = (n: number): string => {
-    const suffixes = ['th', 'st', 'nd', 'rd']
-    const mod100 = n % 100
-    return n + (suffixes[(mod100 - 20) % 10] || suffixes[mod100] || suffixes[0])
-  }
 
   // Helper function to count submissions by looking at submission messages
   const getSubmissionCount = async (): Promise<number> => {
@@ -581,28 +563,6 @@ export default function OrderDetailPage() {
     } catch (error) {
       console.warn('Error getting submission count:', error)
       return 1
-    }
-  }
-
-  // Helper function to create chat message
-  const createChatMessage = async (message: string, senderName?: string) => {
-    try {
-      if (!user || !order) return
-
-      const { error } = await supabase
-        .from('order_messages')
-        .insert({
-          order_id: order.id,
-          sender_id: user.id,
-          sender_name: senderName || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-          message: message
-        })
-
-      if (error) {
-        console.error('Error creating chat message:', error)
-      }
-    } catch (error) {
-      console.error('Error creating chat message:', error)
     }
   }
 
@@ -629,29 +589,10 @@ export default function OrderDetailPage() {
         userId: user.id
       })
 
-      // Get user profile for sender name
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name, username')
-        .eq('id', user.id)
-        .single()
-
-      const senderName = profile?.full_name || profile?.username || 'User'
-
-      // Create appropriate chat message based on status change
-      let chatMessage = ''
       let submissionCount = 1
 
-      if (newStatus === 'in_progress') {
-        chatMessage = '🚀 I have started working on your order! I\'ll keep you updated on the progress.'
-      } else if (newStatus === 'submitted') {
+      if (newStatus === 'submitted') {
         submissionCount = await getSubmissionCount()
-        // DON'T send any submission messages to chat - they appear in timeline only
-        chatMessage = '' // No chat message for submissions
-      } else if (newStatus === 'revision') {
-        chatMessage = '🔄 Thank you for the feedback! I will work on the requested revisions and submit an updated version soon.'
-      } else if (newStatus === 'completed') {
-        chatMessage = '🎉 Thank you for approving the work! It was a pleasure working with you. Feel free to reach out for future projects!'
       }
 
       // Update order status

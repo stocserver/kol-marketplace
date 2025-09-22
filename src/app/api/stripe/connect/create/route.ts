@@ -80,7 +80,7 @@ export async function POST() {
       .eq('id', user.id)
       .single()
 
-    let updateData: any = {}
+    const updateData: Record<string, unknown> = {}
     
     // Only update columns that exist
     if (existingProfile && 'stripe_account_id' in existingProfile) {
