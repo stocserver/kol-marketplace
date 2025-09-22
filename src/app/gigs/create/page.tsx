@@ -921,7 +921,7 @@ function GigPreview({ formData, imagePreviewUrls }: {
         {/* Deliverables Preview */}
         {formData.deliverables.trim() && (
           <div className="mb-4">
-            <h4 className="text-sm font-medium text-gray-700 mb-2">What you'll get:</h4>
+            <h4 className="text-sm font-medium text-gray-700 mb-2">What you&apos;ll get:</h4>
             <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md">
               {formData.deliverables}
             </div>

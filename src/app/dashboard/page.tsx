@@ -9,7 +9,7 @@ import SponsorDashboard from '@/components/dashboard/SponsorDashboard'
 
 
 export default function DashboardPage() {
-  const { currentRole, theme } = useRole()
+  const { currentRole } = useRole()
   const [user, setUser] = useState<Record<string, unknown> | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')

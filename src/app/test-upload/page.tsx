@@ -144,7 +144,7 @@ export default function TestUploadPage() {
       }
 
     } catch (error: unknown) {
-      setResult(prev => prev + `\n💥 Bucket test exception: ${error instanceof Error ? error.message : 'Unknown error'}`
+      setResult(prev => prev + `\n💥 Bucket test exception: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 

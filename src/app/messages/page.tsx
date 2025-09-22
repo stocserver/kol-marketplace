@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import ConversationBox from '@/components/conversation/ConversationBox'
 
 export default function MessagesPage() {
-  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [currentUser, setCurrentUser] = useState<{ id: string; username: string; full_name: string } | null>(null)
   const [unreadConversations, setUnreadConversations] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [startNewChat, setStartNewChat] = useState<string | null>(null)

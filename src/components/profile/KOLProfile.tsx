@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 
 interface KOLProfileProps {
-  user: any
+  user: Record<string, unknown>
 }
 
 export default function KOLProfile({ user }: KOLProfileProps) {

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { useRole } from '@/contexts/RoleContext'
 import { createClient } from '@/lib/supabase/client'
 import OrderReview from '@/components/checkout/OrderReview'
 import StripeProvider from '@/components/checkout/StripeProvider'
