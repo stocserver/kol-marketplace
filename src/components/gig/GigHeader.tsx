@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { useAuth } from '@/hooks/useAuth'
 import { useRouter } from 'next/navigation'
 
@@ -133,10 +134,12 @@ export default function GigHeader({ gig }: GigHeaderProps) {
           
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <img
+              <Image
                 src={gig.kol.avatar_url || '/api/placeholder/48/48'}
                 alt={gig.kol.full_name}
                 className="w-12 h-12 rounded-full object-cover"
+                width={48}
+                height={48}
                 onError={(e) => {
                   const target = e.target as HTMLImageElement
                   target.src = '/api/placeholder/48/48'

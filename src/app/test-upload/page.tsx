@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
 
@@ -241,10 +242,12 @@ export default function TestUploadPage() {
           {imageUrl && (
             <div className="bg-green-50 p-4 rounded-lg">
               <h3 className="text-lg font-semibold text-green-900 mb-2">✅ Upload Successful!</h3>
-              <img 
-                src={imageUrl} 
-                alt="Uploaded test image" 
+              <Image
+                src={imageUrl}
+                alt="Uploaded test image"
                 className="max-w-md max-h-64 object-contain border rounded"
+                width={448}
+                height={256}
               />
               <p className="text-sm text-green-700 mt-2 break-all">{imageUrl}</p>
             </div>

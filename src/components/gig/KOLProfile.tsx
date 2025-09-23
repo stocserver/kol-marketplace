@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { useAuth } from '@/hooks/useAuth'
 import { useRouter } from 'next/navigation'
 
@@ -41,10 +42,12 @@ export default function KOLProfile({ kol }: KOLProfileProps) {
       <h2 className="text-xl font-bold text-gray-900 mb-6">About the KOL</h2>
       
       <div className="flex items-start space-x-4 mb-6">
-        <img
+        <Image
           src={kol.avatar_url || '/api/placeholder/64/64'}
           alt={kol.full_name}
           className="w-16 h-16 rounded-full object-cover"
+          width={64}
+          height={64}
           onError={(e) => {
             const target = e.target as HTMLImageElement
             target.src = '/api/placeholder/64/64'

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRole } from '@/contexts/RoleContext'
 import ConversationsList from './ConversationsList'
@@ -69,7 +69,7 @@ export default function ConversationBox({
 
   useEffect(() => {
     loadConversations()
-  }, [])
+  }, [loadConversations])
 
   // Handle starting new chat with specific recipient
   useEffect(() => {
@@ -151,7 +151,7 @@ export default function ConversationBox({
   }
 
   // Check for new messages via polling
-  const checkForNewMessages = async () => {
+  const checkForNewMessages = useCallback(async () => {
     try {
       console.log('Checking for new messages...')
       console.log('Current user:', currentUser?.id)
@@ -239,9 +239,9 @@ export default function ConversationBox({
     } catch (error) {
       console.error('Failed to check for new messages:', error)
     }
-  }
+  }, [currentUser?.id, selectedConversation, setConversations, setMessages, loadMessagesOnly, setUnreadConversations, unreadConversations.size])
 
-  const loadRecipientInfo = async (recipientId: string) => {
+  const loadRecipientInfo = useCallback(async (recipientId: string) => {
     try {
       const { data: recipient, error } = await supabase
         .from('profiles')
@@ -258,9 +258,9 @@ export default function ConversationBox({
     } catch (error) {
       console.error('Failed to load recipient info:', error)
     }
-  }
+  }, [supabase])
 
-  const loadConversations = async () => {
+  const loadConversations = useCallback(async () => {
     try {
       const response = await fetch('/api/messages/conversations')
       const data = await response.json()
@@ -272,13 +272,13 @@ export default function ConversationBox({
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  const loadMessages = async (conversationId: string) => {
+  const loadMessages = useCallback(async (conversationId: string) => {
     loadMessagesOnly(conversationId)
-  }
+  }, [loadMessagesOnly])
 
-  const loadMessagesOnly = async (conversationId: string, offset = 0, append = false) => {
+  const loadMessagesOnly = useCallback(async (conversationId: string, offset = 0, append = false) => {
     try {
       const response = await fetch(`/api/messages/${conversationId}?limit=20&offset=${offset}`)
       const data = await response.json()
@@ -299,7 +299,7 @@ export default function ConversationBox({
     } catch (error) {
       console.error('Failed to load messages:', error)
     }
-  }
+  }, [setMessages, setHasMoreMessages])
 
   const loadOlderMessages = async () => {
     if (!selectedConversation || loadingOlderMessages || !hasMoreMessages) return

@@ -3,16 +3,36 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 // import { useRole } from '@/contexts/RoleContext'
 import { createClient } from '@/lib/supabase/client'
 import OrderTimeline from '@/components/order/OrderTimeline'
 import OrderChat from '@/components/order/OrderChat'
 import OrderReview from '@/components/order/OrderReview'
-import { Order, Profile } from '@/types'
+import { Order, Profile, OrderStatus } from '@/types'
 
 interface User {
   id: string
   email?: string
+}
+
+interface TimelineStep {
+  id: number
+  type: string
+  title: string
+  description: string
+  timestamp: string
+  status: 'pending' | 'completed' | 'current'
+  submissionData?: {
+    number: number
+    ordinal: string
+    message: string
+    sender: string
+  }
+  fileData?: {
+    message: string
+    sender: string
+  }
 }
 
 interface OrderFile {
@@ -25,10 +45,12 @@ interface OrderFile {
 
 interface Review {
   id: string
-  order_id: string
+  order_id?: string
   rating: number
-  comment?: string
+  comment: string
   created_at: string
+  kol_response?: string
+  kol_response_at?: string
 }
 
 // Order workflow statuses
@@ -36,8 +58,8 @@ const ORDER_STATUSES = {
   PENDING: 'pending',
   PAID: 'paid',
   IN_PROGRESS: 'in_progress',
-  SUBMITTED: 'submitted',
-  REVISION: 'revision',
+  SUBMITTED: 'delivered',
+  REVISION: 'cancelled',
   DELIVERED: 'delivered',
   COMPLETED: 'completed',
   CANCELLED: 'cancelled'
@@ -68,14 +90,14 @@ export default function OrderDetailPage() {
   const isSuccess = searchParams.get('success') === 'true'
 
   // Create comprehensive timeline with consistent workflow
-  const createTimeline = async (currentStatus: string, timestamps: Record<string, unknown>, orderData: Order) => {
-    const baseSteps = [
+  const createTimeline = useCallback(async (currentStatus: string, timestamps: Record<string, unknown>, orderData: Order): Promise<TimelineStep[]> => {
+    const baseSteps: TimelineStep[] = [
       {
         id: 1,
         type: 'order_created',
         title: 'Order Placed',
         description: 'Order has been placed successfully',
-        timestamp: timestamps.order_created || orderData.created_at,
+        timestamp: (timestamps.order_created as string) || orderData.created_at,
         status: 'completed'
       },
       {
@@ -83,7 +105,7 @@ export default function OrderDetailPage() {
         type: 'payment_confirmed',
         title: 'Payment Confirmed',
         description: 'Payment has been processed and confirmed',
-        timestamp: currentStatus !== 'pending' ? (timestamps.payment_confirmed || orderData.created_at) : null,
+        timestamp: currentStatus !== 'pending' ? ((timestamps.payment_confirmed as string) || orderData.created_at) : orderData.created_at,
         status: currentStatus !== 'pending' ? 'completed' : 'pending'
       }
     ]
@@ -95,7 +117,7 @@ export default function OrderDetailPage() {
         type: 'work_started',
         title: 'Work Started',
         description: 'KOL has started working on your content',
-        timestamp: timestamps.work_started || orderData.updated_at,
+        timestamp: (timestamps.work_started as string) || orderData.updated_at,
         status: 'completed'
       })
     } else if (currentStatus === ORDER_STATUSES.PAID) {
@@ -104,7 +126,7 @@ export default function OrderDetailPage() {
         type: 'work_started',
         title: 'Work Started',
         description: 'Waiting for KOL to start work',
-        timestamp: null,
+        timestamp: orderData.updated_at,
         status: 'current'
       })
     }
@@ -147,26 +169,26 @@ export default function OrderDetailPage() {
       // Fallback: If submissions table doesn't exist, check if order status indicates submission
       console.log('📊 Fallback: checking order data for submissions', {
         status: currentStatus,
-        submission_count: (orderData as any).submission_count,
-        last_submission_message: (orderData as any).last_submission_message,
-        last_submission_at: (orderData as any).last_submission_at
+        submission_count: orderData.submission_count,
+        last_submission_message: orderData.last_submission_message,
+        last_submission_at: orderData.last_submission_at
       })
 
-      if ((orderData as any).submission_count && (orderData as any).submission_count > 0) {
-        const ordinal = (orderData as any).submission_count === 1 ? '1st' :
-                       (orderData as any).submission_count === 2 ? '2nd' :
-                       (orderData as any).submission_count === 3 ? '3rd' :
-                       `${(orderData as any).submission_count}th`
+      if (orderData.submission_count && orderData.submission_count > 0) {
+        const ordinal = orderData.submission_count === 1 ? '1st' :
+                       orderData.submission_count === 2 ? '2nd' :
+                       orderData.submission_count === 3 ? '3rd' :
+                       `${orderData.submission_count}th`
 
         baseSteps.push({
           id: nextId++,
           type: 'work_submitted',
           title: `Work Submitted (${ordinal} Submission)`,
           description: `${orderData.kol?.full_name || orderData.kol?.username || 'KOL'} submitted the ${ordinal} version of work`,
-          timestamp: (orderData as any).last_submission_at,
+          timestamp: orderData.last_submission_at || new Date().toISOString(),
           status: 'completed'
         })
-      } else if (currentStatus === 'submitted') {
+      } else if (currentStatus === 'delivered') {
         // If status is submitted but no submission data, show generic submission
         baseSteps.push({
           id: nextId++,
@@ -205,24 +227,24 @@ export default function OrderDetailPage() {
     const hasSubmissions = (!submissionsError && submissions && submissions.length > 0) ||
                           (submissionsError && orderData.submission_count && orderData.submission_count > 0)
 
-    if (currentStatus === 'submitted' && hasSubmissions) {
+    if (currentStatus === 'delivered' && hasSubmissions) {
       // If submitted, show awaiting review after the latest submission
       baseSteps.push({
         id: nextId++,
         type: 'awaiting_review',
         title: 'Awaiting Review',
         description: 'Waiting for sponsor approval',
-        timestamp: null,
+        timestamp: orderData.updated_at,
         status: 'current'
       })
-    } else if (currentStatus === 'revision') {
+    } else if (currentStatus === 'cancelled') {
       // If revision requested, show revision workflow
       baseSteps.push({
         id: nextId++,
         type: 'revision_requested',
         title: 'Revision Requested',
         description: 'Sponsor has requested changes to the work',
-        timestamp: timestamps.revision_requested || orderData.updated_at,
+        timestamp: (timestamps.revision_requested as string) || orderData.updated_at,
         status: 'completed'
       })
       baseSteps.push({
@@ -230,7 +252,7 @@ export default function OrderDetailPage() {
         type: 'revision_in_progress',
         title: 'Working on Revision',
         description: 'KOL is working on the requested changes',
-        timestamp: null,
+        timestamp: orderData.updated_at,
         status: 'current'
       })
     } else if (['delivered', 'completed'].includes(currentStatus)) {
@@ -240,7 +262,7 @@ export default function OrderDetailPage() {
         type: 'work_approved',
         title: 'Work Approved',
         description: 'Sponsor has approved the deliverables',
-        timestamp: timestamps.work_approved || orderData.updated_at,
+        timestamp: (timestamps.work_approved as string) || orderData.updated_at,
         status: 'completed'
       })
     } else if (currentStatus === 'in_progress') {
@@ -250,7 +272,7 @@ export default function OrderDetailPage() {
         type: 'work_in_progress',
         title: 'Work in Progress',
         description: 'KOL is working on your content',
-        timestamp: null,
+        timestamp: orderData.updated_at,
         status: 'current'
       })
     }
@@ -262,13 +284,13 @@ export default function OrderDetailPage() {
         type: 'order_completed',
         title: 'Order Completed',
         description: 'Order has been completed successfully',
-        timestamp: timestamps.order_completed || orderData.updated_at,
+        timestamp: (timestamps.order_completed as string) || orderData.updated_at,
         status: 'completed'
       })
     }
 
     return baseSteps
-  }
+  }, [supabase])
 
   useEffect(() => {
     const loadOrder = async () => {
@@ -428,7 +450,7 @@ export default function OrderDetailPage() {
     return () => {
       channel.unsubscribe()
     }
-  }, [params.id, router, supabase, loadOrderFiles, loadExistingReview, createTimeline])
+  }, [params.id, router, supabase, createTimeline])
 
   const loadOrderFiles = useCallback(async () => {
     try {
@@ -472,7 +494,7 @@ export default function OrderDetailPage() {
         }
         setExistingReview(null)
       } else {
-        setExistingReview(review)
+        setExistingReview(review as Review)
       }
     } catch (error) {
       console.info('Reviews feature unavailable:', error)
@@ -533,11 +555,13 @@ export default function OrderDetailPage() {
   // Helper function to count submissions by looking at submission messages
   const getSubmissionCount = async (): Promise<number> => {
     try {
+      if (!order?.id) return 1
+
       // Get current submission count from order_submissions table
       const { data: submissions, error } = await supabase
         .from('order_submissions')
         .select('submission_number')
-        .eq('order_id', order.id)
+        .eq('order_id', order?.id)
         .order('submission_number', { ascending: false })
         .limit(1)
 
@@ -579,7 +603,7 @@ export default function OrderDetailPage() {
 
       let submissionCount = 1
 
-      if (newStatus === 'submitted') {
+      if (newStatus === 'delivered') {
         submissionCount = await getSubmissionCount()
       }
 
@@ -603,7 +627,7 @@ export default function OrderDetailPage() {
       // All status updates should only appear in timeline, not in chat
 
       // For submissions, try to store in order_submissions table, fallback to order table
-      if (newStatus === 'submitted') {
+      if (newStatus === 'delivered') {
         try {
           const submissionMessage = customMessage || 'Work submitted for review'
 
@@ -646,25 +670,25 @@ export default function OrderDetailPage() {
         payment_confirmed: order.created_at,
         work_started: order.updated_at,
         work_submitted: order.updated_at,
-        revision_requested: newStatus === 'revision' ? new Date().toISOString() : order.updated_at,
+        revision_requested: newStatus === 'cancelled' ? new Date().toISOString() : order.updated_at,
         work_approved: ['completed'].includes(newStatus) ? new Date().toISOString() : order.updated_at,
         order_completed: newStatus === 'completed' ? new Date().toISOString() : order.updated_at
-      }, updatedOrder)
+      }, { ...updatedOrder, status: updatedOrder.status as OrderStatus })
 
-      setOrder({ ...updatedOrder, activities })
+      setOrder({ ...updatedOrder, status: updatedOrder.status as OrderStatus, activities })
 
       // Show success message
-      const statusMessages = {
+      const statusMessages: Record<string, string> = {
         'in_progress': 'Work started successfully!',
-        'submitted': 'Work submitted for review!',
+        'delivered': 'Work delivered for review!',
         'completed': 'Order completed successfully!',
-        'revision': 'Revision requested. KOL will be notified.'
+        'cancelled': 'Order cancelled successfully.'
       }
 
       alert(statusMessages[newStatus] || 'Order status updated')
 
       // Clear submission message after successful submission
-      if (newStatus === 'submitted') {
+      if (newStatus === 'delivered') {
         setSubmissionMessage('')
       }
 
@@ -744,26 +768,28 @@ export default function OrderDetailPage() {
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
               Order #{order.id.split('-')[0].slice(0, 8)}
             </h1>
-            <p className="text-gray-600 mb-4">{order.gig.title}</p>
+            <p className="text-gray-600 mb-4">{order.gig?.title}</p>
             
             <div className="flex items-center space-x-6 text-sm text-gray-600">
               <div className="flex items-center space-x-2">
-                <img
-                  src={order.kol.avatar_url || 'https://images.unsplash.com/photo-1494790108755-2616b352caf1?w=150'}
-                  alt={order.kol.full_name}
+                <Image
+                  src={order.kol?.avatar_url || 'https://images.unsplash.com/photo-1494790108755-2616b352caf1?w=150'}
+                  alt={order.kol?.full_name || 'KOL Avatar'}
                   className="w-8 h-8 rounded-full object-cover"
+                  width={32}
+                  height={32}
                 />
-                <span>@{order.kol.username}</span>
+                <span>@{order.kol?.username}</span>
               </div>
-              <div>Platform: {order.gig.platform}</div>
-              <div>Delivery: {order.gig.delivery_days} days</div>
+              <div>Platform: {order.gig?.platform}</div>
+              <div>Delivery: {order.gig?.delivery_days} days</div>
             </div>
           </div>
           
           <div className="text-right">
             <div className="text-2xl font-bold text-gray-900">${order.amount}</div>
             <div className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
-              order.status === 'confirmed' ? 'bg-blue-100 text-blue-800' :
+              order.status === 'paid' ? 'bg-blue-100 text-blue-800' :
               order.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
               order.status === 'completed' ? 'bg-green-100 text-green-800' :
               'bg-gray-100 text-gray-800'
@@ -777,12 +803,12 @@ export default function OrderDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column - Order Timeline */}
         <div className="lg:col-span-2">
-          <OrderTimeline activities={order.activities} orderFiles={uploadedFiles} />
+          <OrderTimeline activities={(order.activities as TimelineStep[]) || []} />
         </div>
 
         {/* Right Column - Chat & Actions */}
         <div className="lg:col-span-1 space-y-6">
-          <OrderChat orderId={order.id} sellerId={order.sellerId} />
+          <OrderChat orderId={order.id} />
           
           {/* Order Actions */}
           <div className="bg-white rounded-lg p-6 shadow-sm border">
@@ -801,7 +827,7 @@ export default function OrderDetailPage() {
                     </button>
                   )}
                   
-                  {(order.status === 'in_progress' || order.status === 'revision') && (
+                  {(order.status === 'in_progress' || order.status === 'delivered') && (
                     <div className="space-y-4">
                       {/* Submit Work Section */}
                       <div>
@@ -816,7 +842,7 @@ export default function OrderDetailPage() {
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm mb-2"
                         />
                         <button
-                          onClick={() => updateOrderStatus('submitted', submissionMessage.trim() || undefined)}
+                          onClick={() => updateOrderStatus('delivered', submissionMessage.trim() || undefined)}
                           disabled={isSubmitting}
                           className={`w-full ${isSubmitting ? 'bg-gray-400 cursor-not-allowed' : theme.primary + ' ' + theme.primaryHover} text-white py-3 px-4 rounded-lg font-semibold`}
                         >
@@ -879,7 +905,7 @@ export default function OrderDetailPage() {
               )}
               
               {/* Sponsor Actions */}
-              {order.sponsor_id === user?.id && order.status === 'submitted' && (
+              {order.sponsor_id === user?.id && order.status === 'delivered' && (
                 <>
                   <button 
                     onClick={() => updateOrderStatus('completed')}
@@ -888,7 +914,7 @@ export default function OrderDetailPage() {
                     Approve Work
                   </button>
                   <button 
-                    onClick={() => updateOrderStatus('revision')}
+                    onClick={() => updateOrderStatus('cancelled')}
                     className="w-full bg-yellow-600 hover:bg-yellow-700 text-white py-2 px-4 rounded-lg font-medium"
                   >
                     Request Revision
@@ -911,9 +937,9 @@ export default function OrderDetailPage() {
               kolName={order.kol?.full_name || order.kol?.username || 'KOL'}
               sponsorId={order.sponsor_id}
               orderCompletedAt={order.updated_at}
-              currentUserId={user?.id}
+              currentUserId={user?.id || ''}
               userType={userProfile?.user_type || 'sponsor'}
-              existingReview={existingReview}
+              existingReview={existingReview || undefined}
             />
           )}
 
@@ -925,20 +951,20 @@ export default function OrderDetailPage() {
               <div className="flex justify-between">
                 <span className="text-gray-600">Order Date:</span>
                 <span className="text-gray-900">
-                  {new Date(order.createdAt).toLocaleDateString()}
+                  {new Date(order.created_at).toLocaleDateString()}
                 </span>
               </div>
               
               <div className="flex justify-between">
                 <span className="text-gray-600">Delivery Date:</span>
                 <span className="text-gray-900">
-                  {new Date(order.deliveryDate).toLocaleDateString()}
+                  {new Date(new Date(order.created_at).getTime() + (order.gig?.delivery_days || 7) * 24 * 60 * 60 * 1000).toLocaleDateString()}
                 </span>
               </div>
               
               <div className="flex justify-between">
                 <span className="text-gray-600">Fast Delivery:</span>
-                <span className="text-gray-900">{order.fastDelivery ? 'Yes' : 'No'}</span>
+                <span className="text-gray-900">{order.gig?.fast_delivery ? 'Yes' : 'No'}</span>
               </div>
               
               {order.requirements && (

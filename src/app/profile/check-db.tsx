@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Profile } from '@/types'
 
@@ -10,7 +10,7 @@ export default function CheckDbPage() {
   const [error, setError] = useState<string>('')
   const supabase = createClient()
 
-  const loadCurrentProfile = async () => {
+  const loadCurrentProfile = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
@@ -41,7 +41,7 @@ export default function CheckDbPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [supabase])
 
   const refreshData = () => {
     setLoading(true)
@@ -52,7 +52,7 @@ export default function CheckDbPage() {
 
   useEffect(() => {
     loadCurrentProfile()
-  }, [])
+  }, [loadCurrentProfile])
 
   const testDirectInsert = async () => {
     try {

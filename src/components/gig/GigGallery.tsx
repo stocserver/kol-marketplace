@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 
 interface GigGalleryProps {
   gig: {
@@ -26,10 +27,12 @@ export default function GigGallery({ gig }: GigGalleryProps) {
     <div className="bg-white rounded-lg overflow-hidden shadow-sm border">
       {/* Main Image Display */}
       <div className="aspect-video bg-gray-100 relative">
-        <img
+        <Image
           src={currentImage}
           alt={`${gig.title} - Image ${selectedImage + 1}`}
           className="w-full h-full object-cover"
+          fill
+          sizes="(max-width: 768px) 100vw, 800px"
           onError={(e) => {
             const target = e.target as HTMLImageElement
             target.src = '/api/placeholder/800/450'
@@ -84,10 +87,12 @@ export default function GigGallery({ gig }: GigGalleryProps) {
                     : 'border-gray-200 opacity-70 hover:opacity-100'
                 }`}
               >
-                <img
+                <Image
                   src={image}
                   alt={`${gig.title} thumbnail ${index + 1}`}
                   className="w-full h-full object-cover"
+                  fill
+                  sizes="64px"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement
                     target.src = '/api/placeholder/800/450'

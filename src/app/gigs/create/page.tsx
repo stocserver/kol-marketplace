@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useRole } from '@/contexts/RoleContext'
@@ -471,10 +472,12 @@ export default function CreateGigPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                   {imagePreviewUrls.map((url, index) => (
                     <div key={index} className="relative group">
-                      <img
+                      <Image
                         src={url}
                         alt={`Gig image ${index + 1}`}
                         className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                        width={256}
+                        height={128}
                       />
                       <button
                         type="button"
@@ -853,19 +856,23 @@ function GigPreview({ formData, imagePreviewUrls }: {
         {/* Preview Images */}
         {imagePreviewUrls.length > 0 ? (
           <div className="mb-4">
-            <img
+            <Image
               src={imagePreviewUrls[0]}
               alt="Gig preview"
               className="w-full h-40 object-cover rounded-lg mb-2"
+              width={256}
+              height={160}
             />
             {imagePreviewUrls.length > 1 && (
               <div className="flex gap-2">
                 {imagePreviewUrls.slice(1).map((url, index) => (
-                  <img
+                  <Image
                     key={index}
                     src={url}
                     alt={`Preview ${index + 2}`}
                     className="w-16 h-16 object-cover rounded"
+                    width={64}
+                    height={64}
                   />
                 ))}
               </div>

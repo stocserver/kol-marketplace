@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useOrders } from '@/hooks/useOrders'
 
 export interface KOLUser {
@@ -343,10 +344,12 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center space-x-4 mb-4">
-                        <img
+                        <Image
                           src={order.sponsor.avatar_url || '/api/placeholder/48/48'}
                           alt={order.sponsor.full_name}
                           className="w-12 h-12 rounded-full object-cover"
+                          width={48}
+                          height={48}
                         />
                         <div>
                           <h4 className="font-semibold text-gray-900">{order.gig.title}</h4>
@@ -420,8 +423,8 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {user.gigs.map((gig: {id: string; title: string; price: number; image?: string}) => (
                   <div key={gig.id} className="border border-gray-200 rounded-lg overflow-hidden">
-                    <div className="aspect-video bg-gray-200">
-                      <img src={gig.image} alt={gig.title} className="w-full h-full object-cover" />
+                    <div className="aspect-video bg-gray-200 relative">
+                      <Image src={gig.image} alt={gig.title} className="w-full h-full object-cover" fill sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw" />
                     </div>
                     <div className="p-4">
                       <h4 className="font-semibold text-gray-900 mb-2">{gig.title}</h4>
@@ -524,10 +527,12 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
                           <div className="flex items-center justify-between">
                             <div className="flex-1">
                               <div className="flex items-center space-x-3 mb-2">
-                                <img
+                                <Image
                                   src={order.sponsor.avatar_url || '/api/placeholder/32/32'}
                                   alt={order.sponsor.full_name}
                                   className="w-8 h-8 rounded-full object-cover"
+                                  width={32}
+                                  height={32}
                                 />
                                 <div>
                                   <h5 className="font-medium text-gray-900">{order.gig.title}</h5>
@@ -647,10 +652,12 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
               <div className="space-y-4">
                 {user.recent_messages.map((message: {id: string; from: string; preview: string; time: string}) => (
                   <div key={message.id} className="flex items-start space-x-4 p-4 bg-gray-50 rounded-lg">
-                    <img
+                    <Image
                       src={message.sender_image}
                       alt={message.sender_name}
                       className="w-10 h-10 rounded-full object-cover"
+                      width={40}
+                      height={40}
                     />
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-1">

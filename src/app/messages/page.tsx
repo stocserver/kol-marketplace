@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import ConversationBox from '@/components/conversation/ConversationBox'
@@ -13,7 +13,7 @@ export default function MessagesPage() {
   const searchParams = useSearchParams()
   const supabase = createClient()
 
-  const getCurrentUser = async () => {
+  const getCurrentUser = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
     setCurrentUser(user as { id: string; username: string; full_name: string } | null)
     setLoading(false)
@@ -22,7 +22,7 @@ export default function MessagesPage() {
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission()
     }
-  }
+  }, [supabase.auth])
 
   useEffect(() => {
     getCurrentUser()

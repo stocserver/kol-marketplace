@@ -17,6 +17,8 @@ export interface Gig {
   description: string
   price: number
   delivery_days: number
+  platform?: string
+  fast_delivery?: boolean
   is_active: boolean
   created_at: string
   updated_at: string
@@ -42,4 +44,8 @@ export interface Order {
   gig?: Gig
   sponsor?: Profile
   kol?: Profile
+  submission_count?: number
+  last_submission_message?: string
+  last_submission_at?: string
+  activities?: unknown[]
 }

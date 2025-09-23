@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
 import { GENRE_CATEGORIES } from '@/lib/constants'
@@ -241,19 +242,23 @@ export default function AdminGigsPage() {
                         {gig.image_urls && gig.image_urls.length > 0 ? (
                           gig.image_urls.slice(0, 3).map((url, index) => (
                             <div key={index} className="w-16 h-16 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
-                              <img
+                              <Image
                                 src={url}
                                 alt={`${gig.title} - Image ${index + 1}`}
                                 className="w-full h-full object-cover"
+                                fill
+                                sizes="64px"
                               />
                             </div>
                           ))
                         ) : gig.preview_image_url ? (
                           <div className="w-16 h-16 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
-                            <img
+                            <Image
                               src={gig.preview_image_url}
                               alt={gig.title}
                               className="w-full h-full object-cover"
+                              fill
+                              sizes="64px"
                             />
                           </div>
                         ) : null}
@@ -400,10 +405,12 @@ export default function AdminGigsPage() {
                       <div className="space-y-4">
                         {/* Main Image Display */}
                         <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden relative">
-                          <img
+                          <Image
                             src={allImages[selectedImageIndex]}
                             alt={`${reviewGig.title} - Image ${selectedImageIndex + 1}`}
                             className="w-full h-full object-cover"
+                            fill
+                            sizes="(max-width: 768px) 100vw, 800px"
                             onError={(e) => {
                               const target = e.target as HTMLImageElement;
                               target.src = '/api/placeholder/800/450';
@@ -455,10 +462,12 @@ export default function AdminGigsPage() {
                                     : 'border-gray-200 opacity-70 hover:opacity-100'
                                 }`}
                               >
-                                <img
+                                <Image
                                   src={image}
                                   alt={`Thumbnail ${index + 1}`}
                                   className="w-full h-full object-cover"
+                                  fill
+                                  sizes="64px"
                                 />
                               </button>
                             ))}
@@ -547,10 +556,12 @@ export default function AdminGigsPage() {
                       <div className="bg-gray-50 p-4 rounded-lg">
                         <div className="flex items-center mb-4">
                           {reviewGig.kol.avatar_url && (
-                            <img 
-                              src={reviewGig.kol.avatar_url} 
+                            <Image
+                              src={reviewGig.kol.avatar_url}
                               alt={reviewGig.kol.full_name}
                               className="w-12 h-12 rounded-full mr-3"
+                              width={48}
+                              height={48}
                             />
                           )}
                           <div>

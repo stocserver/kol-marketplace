@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { useRole } from '@/contexts/RoleContext'
@@ -69,10 +70,12 @@ export default function SponsorProfile({ user }: SponsorProfileProps) {
       {/* Cover Photo & Profile Header */}
       <div className="relative">
         <div className="h-64 bg-gradient-to-r from-purple-500 to-pink-600 overflow-hidden">
-          <img
+          <Image
             src={user.cover_image}
             alt="Cover"
             className="w-full h-full object-cover opacity-80"
+            fill
+            sizes="100vw"
           />
         </div>
         
@@ -80,10 +83,12 @@ export default function SponsorProfile({ user }: SponsorProfileProps) {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-end space-x-6 pb-6">
               <div className="relative">
-                <img
+                <Image
                   src={user.profile_image}
                   alt={user.full_name}
                   className="w-32 h-32 rounded-full border-4 border-white shadow-lg"
+                  width={128}
+                  height={128}
                 />
                 <div className="absolute bottom-2 right-2 w-6 h-6 bg-green-500 border-2 border-white rounded-full"></div>
               </div>
@@ -186,10 +191,12 @@ export default function SponsorProfile({ user }: SponsorProfileProps) {
                   {user.favorite_kols.map((kol) => (
                     <Link key={kol.id} href={`/profile/${kol.username || kol.id}`}>
                       <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
-                        <img
+                        <Image
                           src={kol.image}
                           alt={kol.name}
                           className="w-10 h-10 rounded-full object-cover"
+                          width={40}
+                          height={40}
                         />
                         <div className="flex-1">
                           <div className="font-medium text-gray-900">{kol.name}</div>
@@ -252,10 +259,12 @@ export default function SponsorProfile({ user }: SponsorProfileProps) {
                             <div className="bg-gray-50 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer">
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center space-x-4">
-                                  <img
+                                  <Image
                                     src={order.kol_image}
                                     alt={order.kol_name}
                                     className="w-12 h-12 rounded-full object-cover"
+                                    width={48}
+                                    height={48}
                                   />
                                   <div>
                                     <h4 className="font-semibold text-gray-900">{order.gig_title}</h4>

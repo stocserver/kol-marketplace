@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 
 interface Review {
@@ -174,10 +175,12 @@ export default function ReviewsList({
             <div className="flex items-start space-x-3">
               <div className="flex-shrink-0">
                 {review.sponsor.avatar_url ? (
-                  <img
+                  <Image
                     src={review.sponsor.avatar_url}
                     alt={review.sponsor.full_name || review.sponsor.username}
                     className="w-10 h-10 rounded-full object-cover"
+                    width={40}
+                    height={40}
                   />
                 ) : (
                   <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">

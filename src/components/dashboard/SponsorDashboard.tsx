@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useOrders } from '@/hooks/useOrders'
 
 export interface SponsorUser {
@@ -278,10 +279,12 @@ export default function SponsorDashboard({ user }: SponsorDashboardProps) {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center space-x-4 mb-4">
-                        <img
+                        <Image
                           src={order.kol.avatar_url || '/api/placeholder/48/48'}
                           alt={order.kol.full_name}
                           className="w-12 h-12 rounded-full object-cover"
+                          width={48}
+                          height={48}
                         />
                         <div>
                           <h4 className="font-semibold text-gray-900">{order.gig.title}</h4>
@@ -377,7 +380,7 @@ export default function SponsorDashboard({ user }: SponsorDashboardProps) {
                   {user.analytics.top_kols.map((kol: { name: string; earnings: number }, index: number) => (
                     <div key={index} className="flex items-center justify-between bg-white rounded-lg p-4">
                       <div className="flex items-center space-x-3">
-                        <img src={kol.image} alt={kol.name} className="w-10 h-10 rounded-full" />
+                        <Image src={kol.image} alt={kol.name} className="w-10 h-10 rounded-full" width={40} height={40} />
                         <div>
                           <p className="font-medium text-gray-900">{kol.name}</p>
                           <p className="text-sm text-gray-600">{kol.platform}</p>
@@ -410,10 +413,12 @@ export default function SponsorDashboard({ user }: SponsorDashboardProps) {
                   <Link key={kol.id} href={`/profile/${kol.username || kol.id}`}>
                     <div className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer">
                       <div className="flex items-center space-x-4 mb-4">
-                        <img
+                        <Image
                           src={kol.image}
                           alt={kol.name}
                           className="w-16 h-16 rounded-full object-cover"
+                          width={64}
+                          height={64}
                         />
                         <div>
                           <h4 className="font-semibold text-gray-900">{kol.name}</h4>

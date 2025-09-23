@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useAuth } from '@/hooks/useAuth'
 import { useFavorites } from '@/hooks/useFavorites'
 import { useRole } from '@/contexts/RoleContext'
@@ -140,10 +141,12 @@ export default function FavoritesPage() {
                 <Link href={`/gigs/${gig.id}`}>
                   <div className="aspect-[4/3] bg-gray-200 relative cursor-pointer">
                     {gig.preview_image_url ? (
-                      <img
+                      <Image
                         src={gig.preview_image_url}
                         alt={gig.title}
                         className="w-full h-full object-cover"
+                        fill
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
                       />
                     ) : (
                       <div className="w-full h-full bg-gray-300 flex items-center justify-center">
