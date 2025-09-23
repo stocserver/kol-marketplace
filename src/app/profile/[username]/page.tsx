@@ -164,7 +164,7 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {user.type === 'kol' ? (
+      {user.user_type === 'kol' ? (
         <KOLProfile user={user} />
       ) : (
         <SponsorProfile user={user} />
