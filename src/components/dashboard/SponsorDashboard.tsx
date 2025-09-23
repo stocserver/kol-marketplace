@@ -354,22 +354,22 @@ export default function SponsorDashboard({ user }: SponsorDashboardProps) {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <div className="bg-blue-50 rounded-lg p-4">
                   <h4 className="text-sm font-medium text-blue-800 mb-2">Total Reach</h4>
-                  <p className="text-2xl font-bold text-blue-900">{(user.analytics && typeof user.analytics === 'object' && 'total_reach' in user.analytics && typeof (user.analytics as any).total_reach === 'number' ? (user.analytics as any).total_reach : 0).toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-blue-900">{(user.analytics && typeof user.analytics === 'object' && 'total_reach' in user.analytics && typeof (user.analytics as Record<string, unknown>).total_reach === 'number' ? (user.analytics as Record<string, unknown>).total_reach as number : 0).toLocaleString()}</p>
                   <p className="text-sm text-blue-600">Across all orders</p>
                 </div>
                 <div className="bg-green-50 rounded-lg p-4">
                   <h4 className="text-sm font-medium text-green-800 mb-2">Avg. Engagement</h4>
-                  <p className="text-2xl font-bold text-green-900">{user.analytics.avg_engagement}%</p>
+                  <p className="text-2xl font-bold text-green-900">{(user.analytics && typeof user.analytics === 'object' && 'avg_engagement' in user.analytics && typeof (user.analytics as Record<string, unknown>).avg_engagement === 'number' ? (user.analytics as Record<string, unknown>).avg_engagement as number : 0)}%</p>
                   <p className="text-sm text-green-600">+2.3% vs last month</p>
                 </div>
                 <div className="bg-purple-50 rounded-lg p-4">
                   <h4 className="text-sm font-medium text-purple-800 mb-2">ROI</h4>
-                  <p className="text-2xl font-bold text-purple-900">{user.analytics.roi}x</p>
+                  <p className="text-2xl font-bold text-purple-900">{(user.analytics && typeof user.analytics === 'object' && 'roi' in user.analytics && typeof (user.analytics as Record<string, unknown>).roi === 'number' ? (user.analytics as Record<string, unknown>).roi as number : 0)}x</p>
                   <p className="text-sm text-purple-600">Return on investment</p>
                 </div>
                 <div className="bg-yellow-50 rounded-lg p-4">
                   <h4 className="text-sm font-medium text-yellow-800 mb-2">Cost per 1K</h4>
-                  <p className="text-2xl font-bold text-yellow-900">${user.analytics.cpm}</p>
+                  <p className="text-2xl font-bold text-yellow-900">${(user.analytics && typeof user.analytics === 'object' && 'cpm' in user.analytics && typeof (user.analytics as Record<string, unknown>).cpm === 'number' ? (user.analytics as Record<string, unknown>).cpm as number : 0)}</p>
                   <p className="text-sm text-yellow-600">Average CPM</p>
                 </div>
               </div>
@@ -377,18 +377,18 @@ export default function SponsorDashboard({ user }: SponsorDashboardProps) {
               <div className="bg-gray-50 rounded-lg p-6">
                 <h4 className="font-semibold text-gray-900 mb-4">Top Performing KOLs</h4>
                 <div className="space-y-3">
-                  {user.analytics.top_kols.map((kol: { name: string; earnings: number }, index: number) => (
+                  {(user.analytics && typeof user.analytics === 'object' && 'top_kols' in user.analytics && Array.isArray((user.analytics as Record<string, unknown>).top_kols) ? (user.analytics as Record<string, unknown>).top_kols as Record<string, unknown>[] : []).map((kol: Record<string, unknown>, index: number) => (
                     <div key={index} className="flex items-center justify-between bg-white rounded-lg p-4">
                       <div className="flex items-center space-x-3">
-                        <Image src={kol.image} alt={kol.name} className="w-10 h-10 rounded-full" width={40} height={40} />
+                        <Image src={kol.image as string} alt={kol.name as string} className="w-10 h-10 rounded-full" width={40} height={40} />
                         <div>
-                          <p className="font-medium text-gray-900">{kol.name}</p>
-                          <p className="text-sm text-gray-600">{kol.platform}</p>
+                          <p className="font-medium text-gray-900">{kol.name as string}</p>
+                          <p className="text-sm text-gray-600">{kol.platform as string}</p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold text-gray-900">{kol.engagement}% engagement</p>
-                        <p className="text-sm text-gray-600">{kol.reach.toLocaleString()} reach</p>
+                        <p className="font-semibold text-gray-900">{kol.engagement as number}% engagement</p>
+                        <p className="text-sm text-gray-600">{(kol.reach as number).toLocaleString()} reach</p>
                       </div>
                     </div>
                   ))}
@@ -409,25 +409,25 @@ export default function SponsorDashboard({ user }: SponsorDashboardProps) {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {user.favorite_kols.map((kol: { id: string; name: string; image: string; rating: number }) => (
-                  <Link key={kol.id} href={`/profile/${kol.username || kol.id}`}>
+                {(user.favorite_kols && Array.isArray(user.favorite_kols) ? user.favorite_kols : []).map((kol: Record<string, unknown>) => (
+                  <Link key={kol.id as string} href={`/profile/${kol.username || kol.id}`}>
                     <div className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer">
                       <div className="flex items-center space-x-4 mb-4">
                         <Image
-                          src={kol.image}
-                          alt={kol.name}
+                          src={kol.image as string}
+                          alt={kol.name as string}
                           className="w-16 h-16 rounded-full object-cover"
                           width={64}
                           height={64}
                         />
                         <div>
-                          <h4 className="font-semibold text-gray-900">{kol.name}</h4>
-                          <p className="text-gray-600">@{kol.username}</p>
+                          <h4 className="font-semibold text-gray-900">{kol.name as string}</h4>
+                          <p className="text-gray-600">@{kol.username as string}</p>
                           <div className="flex items-center space-x-1 text-sm text-yellow-600">
                             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                               <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                             </svg>
-                            <span>{kol.rating}</span>
+                            <span>{kol.rating as number}</span>
                           </div>
                         </div>
                       </div>
@@ -435,16 +435,16 @@ export default function SponsorDashboard({ user }: SponsorDashboardProps) {
                       <div className="space-y-2 text-sm text-gray-600">
                         <div className="flex justify-between">
                           <span>Followers:</span>
-                          <span>{kol.followers >= 1000000 ? `${(kol.followers / 1000000).toFixed(1)}M` : 
-                                kol.followers >= 1000 ? `${(kol.followers / 1000).toFixed(0)}K` : kol.followers}</span>
+                          <span>{(kol.followers as number) >= 1000000 ? `${((kol.followers as number) / 1000000).toFixed(1)}M` :
+                                (kol.followers as number) >= 1000 ? `${((kol.followers as number) / 1000).toFixed(0)}K` : kol.followers as number}</span>
                         </div>
                         <div className="flex justify-between">
                           <span>Starting at:</span>
-                          <span className="font-medium">${kol.starting_price}</span>
+                          <span className="font-medium">${kol.starting_price as number}</span>
                         </div>
                         <div className="flex justify-between">
                           <span>Orders completed:</span>
-                          <span>{kol.completed_orders}</span>
+                          <span>{kol.completed_orders as number}</span>
                         </div>
                       </div>
 

@@ -73,7 +73,7 @@ export default function OrderDetailPage() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [uploadedFiles, setUploadedFiles] = useState<OrderFile[]>([])
+  const [, setUploadedFiles] = useState<OrderFile[]>([])
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [uploadMessage, setUploadMessage] = useState('')
   const [isUploading, setIsUploading] = useState(false)

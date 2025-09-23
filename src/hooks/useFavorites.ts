@@ -116,12 +116,12 @@ export function useFavorites() {
     return favorites.includes(gigId)
   }
 
-  const getFavoriteCount = (gigId: string): Promise<number> => {
-    return supabase
+  const getFavoriteCount = async (gigId: string): Promise<number> => {
+    const { count } = await supabase
       .from('favorites')
       .select('*', { count: 'exact', head: true })
       .eq('gig_id', gigId)
-      .then(({ count }) => count || 0)
+    return count || 0
   }
 
   const getFavoriteGigs = async () => {

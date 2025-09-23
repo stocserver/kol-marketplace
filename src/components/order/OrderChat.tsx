@@ -19,7 +19,7 @@ interface Message {
 export default function OrderChat({ orderId }: OrderChatProps) {
   const [message, setMessage] = useState('')
   const [messages, setMessages] = useState<Message[]>([])
-  const [currentUser, setCurrentUser] = useState<{ id: string; email?: string } | null>(null)
+  const [currentUser, setCurrentUser] = useState<{ id: string; email?: string; display_name?: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 

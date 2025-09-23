@@ -270,7 +270,7 @@ export default function ConversationBox({
     } catch (error) {
       console.error('Failed to check for new messages:', error)
     }
-  }, [currentUser?.id, selectedConversation, setConversations, setMessages, setUnreadConversations, unreadConversations.size])
+  }, [currentUser?.id, selectedConversation, setUnreadConversations, unreadConversations.size])
 
   const loadMessages = useCallback(async (conversationId: string) => {
     loadMessagesOnly(conversationId)

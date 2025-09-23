@@ -71,7 +71,7 @@ export default function KOLProfile({ user }: KOLProfileProps) {
       <div className="relative">
         <div className="h-64 bg-gradient-to-r from-blue-500 to-purple-600 overflow-hidden">
           <Image
-            src={user.cover_image || '/images/default-cover.jpg'}
+            src={(user.cover_image as string) || '/images/default-cover.jpg'}
             alt="Cover"
             width={800}
             height={256}
@@ -85,8 +85,8 @@ export default function KOLProfile({ user }: KOLProfileProps) {
             <div className="flex items-end space-x-6 pb-6">
               <div className="relative">
                 <Image
-                  src={user.profile_image || '/images/default-avatar.jpg'}
-                  alt={user.full_name || 'Profile'}
+                  src={(user.profile_image as string) || '/images/default-avatar.jpg'}
+                  alt={(user.full_name as string) || 'Profile'}
                   width={128}
                   height={128}
                   className="w-32 h-32 rounded-full border-4 border-white shadow-lg"
@@ -96,17 +96,17 @@ export default function KOLProfile({ user }: KOLProfileProps) {
               </div>
               
               <div className="flex-1 text-white">
-                <h1 className="text-3xl font-bold">{user.full_name}</h1>
-                <p className="text-xl opacity-90">@{user.username}</p>
+                <h1 className="text-3xl font-bold">{user.full_name as string}</h1>
+                <p className="text-xl opacity-90">@{user.username as string}</p>
                 <div className="flex items-center space-x-6 mt-2">
                   <div className="flex items-center space-x-1">
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                       <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                     </svg>
-                    <span className="font-semibold">{user.rating}</span>
-                    <span className="opacity-80">({user.total_orders} reviews)</span>
+                    <span className="font-semibold">{user.rating as number}</span>
+                    <span className="opacity-80">({user.total_orders as number} reviews)</span>
                   </div>
-                  <div>{formatFollowers(user.followers)} followers</div>
+                  <div>{formatFollowers(user.followers as number)} followers</div>
                 </div>
               </div>
 
@@ -134,14 +134,14 @@ export default function KOLProfile({ user }: KOLProfileProps) {
             {/* About */}
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">About</h3>
-              <p className="text-gray-700 leading-relaxed mb-4">{user.bio}</p>
+              <p className="text-gray-700 leading-relaxed mb-4">{user.bio as string}</p>
               
               <div className="space-y-3 text-sm text-gray-600">
                 <div className="flex items-center space-x-2">
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
                   </svg>
-                  <span>Member since {new Date(user.member_since).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
+                  <span>Member since {new Date(user.member_since as string).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
                 </div>
                 
                 
@@ -149,7 +149,7 @@ export default function KOLProfile({ user }: KOLProfileProps) {
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2h-3.22l-2.4 1.8a1 1 0 01-1.2 0L5.22 15H5a2 2 0 01-2-2V5zm5.808 7.586l-.808.606-.808-.606L7 12.414V10a1 1 0 112 0v2.414l-.192.172z" clipRule="evenodd" />
                   </svg>
-                  <span>Languages: {user.languages.join(', ')}</span>
+                  <span>Languages: {(user.languages as string[]).join(', ')}</span>
                 </div>
               </div>
             </div>
@@ -158,14 +158,14 @@ export default function KOLProfile({ user }: KOLProfileProps) {
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Platform Stats</h3>
               <div className="space-y-4">
-                {Object.entries(user.platforms).map(([platform, stats]: [string, PlatformStats]) => (
+                {Object.entries(user.platforms as Record<string, PlatformStats>).map(([platform, stats]: [string, PlatformStats]) => (
                   <div key={platform} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div>
                       <div className="font-medium text-gray-900">{platform}</div>
-                      <div className="text-sm text-gray-600">{formatFollowers(stats.followers)} followers</div>
+                      <div className="text-sm text-gray-600">{formatFollowers(stats.followers as number)} followers</div>
                     </div>
                     <div className="text-right">
-                      <div className="font-semibold text-green-600">{stats.engagement}</div>
+                      <div className="font-semibold text-green-600">{stats.engagement as string}</div>
                       <div className="text-xs text-gray-500">engagement</div>
                     </div>
                   </div>
@@ -176,9 +176,9 @@ export default function KOLProfile({ user }: KOLProfileProps) {
             {/* Recent Work Portfolio */}
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Work</h3>
-              {user.recent_work && user.recent_work.length > 0 ? (
+              {user.recent_work && (user.recent_work as string[]).length > 0 ? (
                 <div className="grid grid-cols-3 gap-2">
-                  {user.recent_work.map((image: string, index: number) => (
+                  {(user.recent_work as string[]).map((image: string, index: number) => (
                     <div key={index} className="aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity">
                       <Image
                         src={image}
@@ -229,15 +229,15 @@ export default function KOLProfile({ user }: KOLProfileProps) {
               <div className="p-6">
                 {activeTab === 'gigs' && (
                   <div>
-                    {user.gigs && user.gigs.length > 0 ? (
+                    {user.gigs && (user.gigs as GigData[]).length > 0 ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {user.gigs.map((gig: GigData) => (
-                      <Link key={gig.id} href={`/gigs/${gig.id}`}>
+                        {(user.gigs as GigData[]).map((gig: GigData) => (
+                      <Link key={gig.id as string} href={`/gigs/${gig.id}`}>
                         <div className="bg-gray-50 rounded-lg overflow-hidden hover:shadow-md transition-shadow cursor-pointer">
                           <div className="aspect-video bg-gray-200">
                             <Image
-                              src={gig.image || '/images/default-gig.jpg'}
-                              alt={gig.title}
+                              src={(gig.image as string) || '/images/default-gig.jpg'}
+                              alt={gig.title as string}
                               width={400}
                               height={225}
                               className="w-full h-full object-cover"
@@ -245,18 +245,18 @@ export default function KOLProfile({ user }: KOLProfileProps) {
                             />
                           </div>
                           <div className="p-4">
-                            <h4 className="font-semibold text-gray-900 mb-2 line-clamp-2">{gig.title}</h4>
+                            <h4 className="font-semibold text-gray-900 mb-2 line-clamp-2">{gig.title as string}</h4>
                             <div className="flex items-center justify-between">
-                              <div className="text-lg font-bold text-blue-600">${gig.price}</div>
+                              <div className="text-lg font-bold text-blue-600">${gig.price as number}</div>
                               <div className="flex items-center space-x-4 text-sm text-gray-600">
                                 <div className="flex items-center space-x-1">
                                   <svg className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
                                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                                   </svg>
-                                  <span>{gig.rating}</span>
-                                  <span>({gig.orders})</span>
+                                  <span>{gig.rating as number}</span>
+                                  <span>({gig.orders as number})</span>
                                 </div>
-                                <span>{gig.delivery_days} days</span>
+                                <span>{gig.delivery_days as number} days</span>
                               </div>
                             </div>
                           </div>
@@ -280,13 +280,13 @@ export default function KOLProfile({ user }: KOLProfileProps) {
 
                 {activeTab === 'reviews' && (
                   <div className="space-y-6">
-                    {user.reviews && user.reviews.length > 0 ? (
-                      user.reviews.map((review: ReviewData) => (
-                        <div key={review.id} className="border-b border-gray-200 pb-6">
+                    {user.reviews && (user.reviews as ReviewData[]).length > 0 ? (
+                      (user.reviews as ReviewData[]).map((review: ReviewData) => (
+                        <div key={review.id as string} className="border-b border-gray-200 pb-6">
                           <div className="flex items-start space-x-4">
                             <Image
-                              src={review.reviewer_image || '/images/default-avatar.jpg'}
-                              alt={review.reviewer_name}
+                              src={(review.reviewer_image as string) || '/images/default-avatar.jpg'}
+                              alt={review.reviewer_name as string}
                               width={48}
                               height={48}
                               className="w-12 h-12 rounded-full object-cover"
@@ -294,9 +294,9 @@ export default function KOLProfile({ user }: KOLProfileProps) {
                             />
                             <div className="flex-1">
                               <div className="flex items-center justify-between mb-2">
-                                <h4 className="font-semibold text-gray-900">{review.reviewer_name}</h4>
+                                <h4 className="font-semibold text-gray-900">{review.reviewer_name as string}</h4>
                                 <span className="text-sm text-gray-500">
-                                  {new Date(review.date).toLocaleDateString()}
+                                  {new Date(review.date as string).toLocaleDateString()}
                                 </span>
                               </div>
                               
@@ -306,7 +306,7 @@ export default function KOLProfile({ user }: KOLProfileProps) {
                                     <svg
                                       key={i}
                                       className={`w-4 h-4 ${
-                                        i < review.rating ? 'text-yellow-400' : 'text-gray-300'
+                                        i < (review.rating as number) ? 'text-yellow-400' : 'text-gray-300'
                                       }`}
                                       fill="currentColor"
                                       viewBox="0 0 20 20"
@@ -315,10 +315,10 @@ export default function KOLProfile({ user }: KOLProfileProps) {
                                     </svg>
                                   ))}
                                 </div>
-                                <span className="text-sm text-gray-600">for &quot;{review.order_title}&quot;</span>
+                                <span className="text-sm text-gray-600">for &quot;{review.order_title as string}&quot;</span>
                               </div>
                               
-                              <p className="text-gray-700">{review.comment}</p>
+                              <p className="text-gray-700">{review.comment as string}</p>
                             </div>
                           </div>
                         </div>

@@ -18,12 +18,18 @@ interface SponsorProfileProps {
     industry?: string
     website?: string
     bio?: string
+    member_since?: string
+    total_campaigns?: number
+    total_spent?: number
+    active_orders?: number
+    completed_orders?: number
     favorite_kols?: Array<{
       id: string
       name: string
       username?: string
       image: string
       rating: number
+      followers?: number
     }>
     recent_orders?: Array<{
       id: string
@@ -32,6 +38,10 @@ interface SponsorProfileProps {
       status: string
       created_at: string
       kol_name: string
+      gig_title?: string
+      kol_image?: string
+      date?: string
+      delivery_date?: string
     }>
   }
 }
@@ -71,7 +81,7 @@ export default function SponsorProfile({ user }: SponsorProfileProps) {
       <div className="relative">
         <div className="h-64 bg-gradient-to-r from-purple-500 to-pink-600 overflow-hidden">
           <Image
-            src={user.cover_image}
+            src={user.cover_image || '/images/default-cover.jpg'}
             alt="Cover"
             className="w-full h-full object-cover opacity-80"
             fill
@@ -84,8 +94,8 @@ export default function SponsorProfile({ user }: SponsorProfileProps) {
             <div className="flex items-end space-x-6 pb-6">
               <div className="relative">
                 <Image
-                  src={user.profile_image}
-                  alt={user.full_name}
+                  src={user.profile_image || '/images/default-avatar.jpg'}
+                  alt={(user.full_name as string) || 'Profile'}
                   className="w-32 h-32 rounded-full border-4 border-white shadow-lg"
                   width={128}
                   height={128}
@@ -94,13 +104,13 @@ export default function SponsorProfile({ user }: SponsorProfileProps) {
               </div>
               
               <div className="flex-1 text-white">
-                <h1 className="text-3xl font-bold">{user.full_name}</h1>
-                <p className="text-xl opacity-90">@{user.username}</p>
+                <h1 className="text-3xl font-bold">{user.full_name as string}</h1>
+                <p className="text-xl opacity-90">@{user.username as string}</p>
                 <div className="flex items-center space-x-6 mt-2">
-                  <div>{user.company_size}</div>
-                  <div>{user.industry}</div>
+                  <div>{user.company_size as string}</div>
+                  <div>{user.industry as string}</div>
                   {user.website && (
-                    <a href={user.website} target="_blank" rel="noopener noreferrer" className="underline hover:no-underline">
+                    <a href={user.website as string} target="_blank" rel="noopener noreferrer" className="underline hover:no-underline">
                       Website
                     </a>
                   )}
@@ -131,28 +141,28 @@ export default function SponsorProfile({ user }: SponsorProfileProps) {
             {/* About */}
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">About</h3>
-              <p className="text-gray-700 leading-relaxed mb-4">{user.bio}</p>
+              <p className="text-gray-700 leading-relaxed mb-4">{user.bio as string}</p>
               
               <div className="space-y-3 text-sm text-gray-600">
                 <div className="flex items-center space-x-2">
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
                   </svg>
-                  <span>Member since {new Date(user.member_since).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
+                  <span>Member since {new Date(user.member_since as string).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
                 </div>
                 
                 <div className="flex items-center space-x-2">
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 2v8h12V6H4z" clipRule="evenodd" />
                   </svg>
-                  <span>Industry: {user.industry}</span>
+                  <span>Industry: {user.industry as string}</span>
                 </div>
                 
                 <div className="flex items-center space-x-2">
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
                   </svg>
-                  <span>{user.company_size}</span>
+                  <span>{user.company_size as string}</span>
                 </div>
               </div>
             </div>
@@ -162,22 +172,22 @@ export default function SponsorProfile({ user }: SponsorProfileProps) {
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Campaign Stats</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-blue-50 rounded-lg p-4 text-center">
-                  <div className="text-2xl font-bold text-blue-600">{user.total_campaigns}</div>
+                  <div className="text-2xl font-bold text-blue-600">{user.total_campaigns as number}</div>
                   <div className="text-sm text-gray-600">Total Campaigns</div>
                 </div>
                 
                 <div className="bg-green-50 rounded-lg p-4 text-center">
-                  <div className="text-2xl font-bold text-green-600">${user.total_spent.toLocaleString()}</div>
+                  <div className="text-2xl font-bold text-green-600">${(user.total_spent as number).toLocaleString()}</div>
                   <div className="text-sm text-gray-600">Total Spent</div>
                 </div>
                 
                 <div className="bg-yellow-50 rounded-lg p-4 text-center">
-                  <div className="text-2xl font-bold text-yellow-600">{user.active_orders}</div>
+                  <div className="text-2xl font-bold text-yellow-600">{user.active_orders as number}</div>
                   <div className="text-sm text-gray-600">Active Orders</div>
                 </div>
                 
                 <div className="bg-purple-50 rounded-lg p-4 text-center">
-                  <div className="text-2xl font-bold text-purple-600">{user.completed_orders}</div>
+                  <div className="text-2xl font-bold text-purple-600">{user.completed_orders as number}</div>
                   <div className="text-sm text-gray-600">Completed</div>
                 </div>
               </div>
@@ -186,29 +196,29 @@ export default function SponsorProfile({ user }: SponsorProfileProps) {
             {/* Favorite KOLs */}
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Favorite KOLs</h3>
-              {user.favorite_kols && user.favorite_kols.length > 0 ? (
+              {user.favorite_kols && (user.favorite_kols as Array<unknown>).length > 0 ? (
                 <div className="space-y-3">
-                  {user.favorite_kols.map((kol) => (
-                    <Link key={kol.id} href={`/profile/${kol.username || kol.id}`}>
+                  {(user.favorite_kols as Array<Record<string, unknown>>).map((kol) => (
+                    <Link key={kol.id as string} href={`/profile/${kol.username || kol.id}`}>
                       <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
                         <Image
-                          src={kol.image}
-                          alt={kol.name}
+                          src={kol.image as string}
+                          alt={kol.name as string}
                           className="w-10 h-10 rounded-full object-cover"
                           width={40}
                           height={40}
                         />
                         <div className="flex-1">
-                          <div className="font-medium text-gray-900">{kol.name}</div>
-                          <div className="text-sm text-gray-600">@{kol.username}</div>
+                          <div className="font-medium text-gray-900">{kol.name as string}</div>
+                          <div className="text-sm text-gray-600">@{kol.username as string}</div>
                         </div>
                         <div className="text-right">
                           <div className="text-sm font-medium text-gray-900">
-                            {kol.followers >= 1000000 ? `${(kol.followers / 1000000).toFixed(1)}M` :
-                             kol.followers >= 1000 ? `${(kol.followers / 1000).toFixed(0)}K` :
-                             kol.followers} followers
+                            {(kol.followers as number) >= 1000000 ? `${((kol.followers as number) / 1000000).toFixed(1)}M` :
+                             (kol.followers as number) >= 1000 ? `${((kol.followers as number) / 1000).toFixed(0)}K` :
+                             (kol.followers as number)} followers
                           </div>
-                          <div className="text-xs text-gray-500">⭐ {kol.rating}</div>
+                          <div className="text-xs text-gray-500">⭐ {kol.rating as number}</div>
                         </div>
                       </div>
                     </Link>
@@ -252,34 +262,34 @@ export default function SponsorProfile({ user }: SponsorProfileProps) {
               <div className="p-6">
                 {activeTab === 'orders' && (
                   <div className="space-y-4">
-                    {user.recent_orders && user.recent_orders.length > 0 ? (
+                    {user.recent_orders && (user.recent_orders as Array<unknown>).length > 0 ? (
                       <>
-                        {user.recent_orders.map((order) => (
-                          <Link key={order.id} href={`/orders/${order.id}`}>
+                        {(user.recent_orders as Array<Record<string, unknown>>).map((order) => (
+                          <Link key={order.id as string} href={`/orders/${order.id}`}>
                             <div className="bg-gray-50 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer">
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center space-x-4">
                                   <Image
-                                    src={order.kol_image}
-                                    alt={order.kol_name}
+                                    src={order.kol_image as string}
+                                    alt={order.kol_name as string}
                                     className="w-12 h-12 rounded-full object-cover"
                                     width={48}
                                     height={48}
                                   />
                                   <div>
-                                    <h4 className="font-semibold text-gray-900">{order.gig_title}</h4>
-                                    <p className="text-sm text-gray-600">with {order.kol_name}</p>
+                                    <h4 className="font-semibold text-gray-900">{order.gig_title as string}</h4>
+                                    <p className="text-sm text-gray-600">with {order.kol_name as string}</p>
                                     <div className="flex items-center space-x-4 text-xs text-gray-500 mt-1">
-                                      <span>Ordered: {new Date(order.date).toLocaleDateString()}</span>
-                                      <span>Delivery: {new Date(order.delivery_date).toLocaleDateString()}</span>
+                                      <span>Ordered: {new Date(order.date as string).toLocaleDateString()}</span>
+                                      <span>Delivery: {new Date(order.delivery_date as string).toLocaleDateString()}</span>
                                     </div>
                                   </div>
                                 </div>
                                 
                                 <div className="text-right">
-                                  <div className="text-lg font-bold text-gray-900">${order.amount}</div>
-                                  <div className={`inline-flex px-2 py-1 rounded-full text-xs font-medium mt-1 ${getStatusColor(order.status)}`}>
-                                    {order.status.replace('_', ' ').toUpperCase()}
+                                  <div className="text-lg font-bold text-gray-900">${order.amount as number}</div>
+                                  <div className={`inline-flex px-2 py-1 rounded-full text-xs font-medium mt-1 ${getStatusColor(order.status as string)}`}>
+                                    {(order.status as string).replace('_', ' ').toUpperCase()}
                                   </div>
                                 </div>
                               </div>

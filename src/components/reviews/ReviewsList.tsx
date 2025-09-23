@@ -79,7 +79,7 @@ export default function ReviewsList({
         return
       }
 
-      setReviews(data || [])
+      setReviews((data as unknown as Review[]) || [])
 
       // Check if there are more reviews
       if (pageLimit) {
