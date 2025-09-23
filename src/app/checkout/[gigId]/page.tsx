@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import OrderReview from '@/components/checkout/OrderReview'
 import StripeProvider from '@/components/checkout/StripeProvider'
@@ -245,19 +246,25 @@ export default function CheckoutPage() {
         {/* Header */}
         <div className="bg-white rounded-lg p-6 shadow-sm mb-6">
           <div className="flex items-center space-x-4">
-            <img
-              src={gig.preview_image_url}
+            <Image
+              src={gig.preview_image_url || '/images/default-gig.jpg'}
               alt={gig.title}
+              width={80}
+              height={80}
               className="w-20 h-20 rounded-lg object-cover"
+              style={{objectFit: 'cover'}}
             />
             <div className="flex-1">
               <h1 className="text-xl font-bold text-gray-900">{gig.title}</h1>
               <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600">
                 <div className="flex items-center space-x-2">
-                  <img
-                    src={gig.kol.profile_image}
-                    alt={gig.kol.full_name}
+                  <Image
+                    src={gig.kol.profile_image || '/images/default-avatar.jpg'}
+                    alt={gig.kol.full_name || 'KOL Profile'}
+                    width={24}
+                    height={24}
                     className="w-6 h-6 rounded-full"
+                    style={{objectFit: 'cover'}}
                   />
                   <span>@{gig.kol.username}</span>
                 </div>

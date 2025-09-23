@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { useRole } from '@/contexts/RoleContext'
 import { useAuth } from '@/hooks/useAuth'
@@ -596,10 +597,13 @@ export default function MarketplacePage() {
                   <Link href={`/gigs/${gig.id}`}>
                     <div className="aspect-[4/3] bg-gray-200 relative cursor-pointer">
                       {gig.preview_image_url ? (
-                        <img
+                        <Image
                           src={gig.preview_image_url}
                           alt={gig.title}
+                          width={400}
+                          height={300}
                           className="w-full h-full object-cover"
+                          style={{objectFit: 'cover'}}
                         />
                       ) : (
                         <div className="w-full h-full bg-gray-300 flex items-center justify-center">

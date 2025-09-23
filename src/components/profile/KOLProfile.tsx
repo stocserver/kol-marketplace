@@ -2,11 +2,45 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 
+interface PlatformStats {
+  followers: number
+  engagement_rate: number
+  [key: string]: unknown
+}
+
+interface GigData {
+  id: string
+  title: string
+  price: number
+  image_url?: string
+  [key: string]: unknown
+}
+
+interface ReviewData {
+  id: string
+  reviewer_name: string
+  reviewer_image: string
+  rating: number
+  comment: string
+  [key: string]: unknown
+}
+
+interface KOLUser {
+  id: string
+  platforms: Record<string, PlatformStats>
+  gigs?: GigData[]
+  reviews?: ReviewData[]
+  cover_image?: string
+  avatar_url?: string
+  [key: string]: unknown
+}
+
 interface KOLProfileProps {
-  user: Record<string, unknown>
+  user: KOLUser
 }
 
 export default function KOLProfile({ user }: KOLProfileProps) {
@@ -36,10 +70,13 @@ export default function KOLProfile({ user }: KOLProfileProps) {
       {/* Cover Photo & Profile Header */}
       <div className="relative">
         <div className="h-64 bg-gradient-to-r from-blue-500 to-purple-600 overflow-hidden">
-          <img
-            src={user.cover_image}
+          <Image
+            src={user.cover_image || '/images/default-cover.jpg'}
             alt="Cover"
+            width={800}
+            height={256}
             className="w-full h-full object-cover opacity-80"
+            style={{objectFit: 'cover'}}
           />
         </div>
         
@@ -47,10 +84,13 @@ export default function KOLProfile({ user }: KOLProfileProps) {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-end space-x-6 pb-6">
               <div className="relative">
-                <img
-                  src={user.profile_image}
-                  alt={user.full_name}
+                <Image
+                  src={user.profile_image || '/images/default-avatar.jpg'}
+                  alt={user.full_name || 'Profile'}
+                  width={128}
+                  height={128}
                   className="w-32 h-32 rounded-full border-4 border-white shadow-lg"
+                  style={{objectFit: 'cover'}}
                 />
                 <div className="absolute bottom-2 right-2 w-6 h-6 bg-green-500 border-2 border-white rounded-full"></div>
               </div>
@@ -118,7 +158,7 @@ export default function KOLProfile({ user }: KOLProfileProps) {
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Platform Stats</h3>
               <div className="space-y-4">
-                {Object.entries(user.platforms).map(([platform, stats]: [string, any]) => (
+                {Object.entries(user.platforms).map(([platform, stats]: [string, PlatformStats]) => (
                   <div key={platform} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div>
                       <div className="font-medium text-gray-900">{platform}</div>
@@ -140,10 +180,13 @@ export default function KOLProfile({ user }: KOLProfileProps) {
                 <div className="grid grid-cols-3 gap-2">
                   {user.recent_work.map((image: string, index: number) => (
                     <div key={index} className="aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity">
-                      <img
+                      <Image
                         src={image}
                         alt={`Work ${index + 1}`}
+                        width={120}
+                        height={120}
                         className="w-full h-full object-cover"
+                        style={{objectFit: 'cover'}}
                       />
                     </div>
                   ))}
@@ -188,14 +231,17 @@ export default function KOLProfile({ user }: KOLProfileProps) {
                   <div>
                     {user.gigs && user.gigs.length > 0 ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {user.gigs.map((gig: any) => (
+                        {user.gigs.map((gig: GigData) => (
                       <Link key={gig.id} href={`/gigs/${gig.id}`}>
                         <div className="bg-gray-50 rounded-lg overflow-hidden hover:shadow-md transition-shadow cursor-pointer">
                           <div className="aspect-video bg-gray-200">
-                            <img
-                              src={gig.image}
+                            <Image
+                              src={gig.image || '/images/default-gig.jpg'}
                               alt={gig.title}
+                              width={400}
+                              height={225}
                               className="w-full h-full object-cover"
+                              style={{objectFit: 'cover'}}
                             />
                           </div>
                           <div className="p-4">
@@ -235,13 +281,16 @@ export default function KOLProfile({ user }: KOLProfileProps) {
                 {activeTab === 'reviews' && (
                   <div className="space-y-6">
                     {user.reviews && user.reviews.length > 0 ? (
-                      user.reviews.map((review: any) => (
+                      user.reviews.map((review: ReviewData) => (
                         <div key={review.id} className="border-b border-gray-200 pb-6">
                           <div className="flex items-start space-x-4">
-                            <img
-                              src={review.reviewer_image}
+                            <Image
+                              src={review.reviewer_image || '/images/default-avatar.jpg'}
                               alt={review.reviewer_name}
+                              width={48}
+                              height={48}
                               className="w-12 h-12 rounded-full object-cover"
+                              style={{objectFit: 'cover'}}
                             />
                             <div className="flex-1">
                               <div className="flex items-center justify-between mb-2">

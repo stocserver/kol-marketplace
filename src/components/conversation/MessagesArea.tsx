@@ -99,7 +99,7 @@ export default function MessagesArea({
       clearTimeout(timer)
       observer.disconnect()
     }
-  }, [hasMoreMessages, loadingOlderMessages, onLoadOlderMessages])
+  }, [hasMoreMessages, loadingOlderMessages, onLoadOlderMessages, messagesStartRef])
 
   if (!selectedConversation) {
     return (

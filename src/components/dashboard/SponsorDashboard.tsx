@@ -4,8 +4,16 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useOrders } from '@/hooks/useOrders'
 
+interface SponsorUser {
+  id: string
+  username?: string
+  full_name?: string
+  avatar_url?: string
+  [key: string]: unknown
+}
+
 interface SponsorDashboardProps {
-  user: any
+  user: SponsorUser
 }
 
 export default function SponsorDashboard({ user }: SponsorDashboardProps) {
@@ -289,7 +297,7 @@ export default function SponsorDashboard({ user }: SponsorDashboardProps) {
                         <div className="bg-blue-50 rounded-lg p-4 mb-4">
                           <h5 className="font-medium text-gray-900 mb-2">Latest Deliverables:</h5>
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                            {order.deliverables.map((file: any, index: number) => (
+                            {order.deliverables.map((file: { name: string; url: string }, index: number) => (
                               <div key={index} className="bg-white rounded p-2 text-center">
                                 <div className="w-12 h-12 bg-blue-100 rounded mx-auto mb-2 flex items-center justify-center">
                                   <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
@@ -366,7 +374,7 @@ export default function SponsorDashboard({ user }: SponsorDashboardProps) {
               <div className="bg-gray-50 rounded-lg p-6">
                 <h4 className="font-semibold text-gray-900 mb-4">Top Performing KOLs</h4>
                 <div className="space-y-3">
-                  {user.analytics.top_kols.map((kol: any, index: number) => (
+                  {user.analytics.top_kols.map((kol: { name: string; earnings: number }, index: number) => (
                     <div key={index} className="flex items-center justify-between bg-white rounded-lg p-4">
                       <div className="flex items-center space-x-3">
                         <img src={kol.image} alt={kol.name} className="w-10 h-10 rounded-full" />
@@ -398,7 +406,7 @@ export default function SponsorDashboard({ user }: SponsorDashboardProps) {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {user.favorite_kols.map((kol: any) => (
+                {user.favorite_kols.map((kol: { id: string; name: string; image: string; rating: number }) => (
                   <Link key={kol.id} href={`/profile/${kol.username || kol.id}`}>
                     <div className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer">
                       <div className="flex items-center space-x-4 mb-4">

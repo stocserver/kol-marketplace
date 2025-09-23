@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 // import { useRole } from '@/contexts/RoleContext'
@@ -440,9 +440,9 @@ export default function OrderDetailPage() {
     return () => {
       channel.unsubscribe()
     }
-  }, [params.id, router, supabase])
+  }, [params.id, router, supabase, loadOrderFiles, loadExistingReview, createTimeline])
 
-  const loadOrderFiles = async () => {
+  const loadOrderFiles = useCallback(async () => {
     try {
       // Check if order_files table exists and is accessible
       const { data: files, error } = await supabase
@@ -468,9 +468,9 @@ export default function OrderDetailPage() {
       // Set empty array as fallback to prevent page crash
       setUploadedFiles([])
     }
-  }
+  }, [supabase, params.id])
 
-  const loadExistingReview = async () => {
+  const loadExistingReview = useCallback(async () => {
     try {
       const { data: review, error } = await supabase
         .from('reviews')
@@ -490,7 +490,7 @@ export default function OrderDetailPage() {
       console.info('Reviews feature unavailable:', error)
       setExistingReview(null)
     }
-  }
+  }, [supabase, params.id])
 
 
   const handleFileUpload = async () => {

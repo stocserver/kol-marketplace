@@ -30,7 +30,7 @@ export async function GET() {
     }
 
     // Check if user is admin
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('user_type, email')
       .eq('id', user.id)

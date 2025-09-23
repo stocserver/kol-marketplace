@@ -4,14 +4,22 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useOrders } from '@/hooks/useOrders'
 
+interface KOLUser {
+  id: string
+  username?: string
+  full_name?: string
+  avatar_url?: string
+  [key: string]: unknown
+}
+
 interface KOLDashboardProps {
-  user: any
+  user: KOLUser
 }
 
 export default function KOLDashboard({ user }: KOLDashboardProps) {
   const [activeTab, setActiveTab] = useState('orders')
   const { kolOrders, loading: ordersLoading, updateOrderStatus } = useOrders()
-  const [payoutRequests, setPayoutRequests] = useState<any[]>([])
+  const [payoutRequests, setPayoutRequests] = useState<{id: string; amount: number; status: string; [key: string]: unknown}[]>([])
   const [payoutLoading, setPayoutLoading] = useState(false)
   
   // Calculate stats directly from the fetched orders (same source as the order list)
@@ -378,7 +386,7 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
                                                 action.action === 'submit' ? 'submitted' : 
                                                 action.action === 'revise' ? 'submitted' : order.status
                                 if (newStatus !== order.status) {
-                                  updateOrderStatus(order.id, newStatus as any)
+                                  updateOrderStatus(order.id, newStatus as 'in_progress' | 'submitted')
                                 }
                               }
                             }}
@@ -410,7 +418,7 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {user.gigs.map((gig: any) => (
+                {user.gigs.map((gig: {id: string; title: string; price: number; image?: string}) => (
                   <div key={gig.id} className="border border-gray-200 rounded-lg overflow-hidden">
                     <div className="aspect-video bg-gray-200">
                       <img src={gig.image} alt={gig.title} className="w-full h-full object-cover" />
@@ -461,7 +469,7 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
               <div className="bg-gray-50 rounded-lg p-6">
                 <h4 className="font-semibold text-gray-900 mb-4">Recent Transactions</h4>
                 <div className="space-y-3">
-                  {user.recent_transactions.map((transaction: any, index: number) => (
+                  {user.recent_transactions.map((transaction: {amount: number; date: string; type: string}, index: number) => (
                     <div key={index} className="flex items-center justify-between py-2">
                       <div>
                         <p className="font-medium text-gray-900">{transaction.description}</p>
@@ -637,7 +645,7 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-6">Recent Messages</h3>
               <div className="space-y-4">
-                {user.recent_messages.map((message: any) => (
+                {user.recent_messages.map((message: {id: string; from: string; preview: string; time: string}) => (
                   <div key={message.id} className="flex items-start space-x-4 p-4 bg-gray-50 rounded-lg">
                     <img
                       src={message.sender_image}

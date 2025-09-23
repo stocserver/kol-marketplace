@@ -15,7 +15,7 @@ export default function MessagesPage() {
 
   useEffect(() => {
     getCurrentUser()
-  }, [])
+  }, [getCurrentUser])
 
   useEffect(() => {
     // Check if we have a recipient parameter to start a new conversation

@@ -92,7 +92,7 @@ export default function ConversationBox({
       // Clear the startNewChat parameter
       setStartNewChat?.(null)
     }
-  }, [startNewChat, conversations, setStartNewChat])
+  }, [startNewChat, conversations, setStartNewChat, loadRecipientInfo])
 
   // Set up polling for new messages every 10 seconds
   useEffect(() => {
@@ -108,7 +108,7 @@ export default function ConversationBox({
         clearInterval(interval)
       }
     }
-  }, [currentUser, selectedConversation])
+  }, [currentUser, selectedConversation, checkForNewMessages])
 
   useEffect(() => {
     if (selectedConversation) {
@@ -120,7 +120,7 @@ export default function ConversationBox({
         return newSet
       })
     }
-  }, [selectedConversation])
+  }, [selectedConversation, loadMessages, setUnreadConversations])
 
   // Only auto-scroll when we specifically want to (new message sent/received)
   useEffect(() => {
