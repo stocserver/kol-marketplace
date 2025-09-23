@@ -53,18 +53,9 @@ export default function AdminGigsPage() {
   const supabase = createClient()
 
   // Simple admin check - in production, you'd want proper role-based access control
-  const isAdmin = user?.email === 'admin@kolmarketplace.com' || 
-                  user?.email?.endsWith('@admin.com') || 
+  const isAdmin = user?.email === 'admin@kolmarketplace.com' ||
+                  user?.email?.endsWith('@admin.com') ||
                   user?.email === 'ivn.c.yu@gmail.com'
-
-  useEffect(() => {
-    if (!user) return
-    if (!isAdmin) {
-      router.push('/dashboard')
-      return
-    }
-    fetchGigs()
-  }, [user, isAdmin, fetchGigs, router])
 
   const fetchGigs = useCallback(async () => {
     try {
@@ -105,6 +96,15 @@ export default function AdminGigsPage() {
       setLoading(false)
     }
   }, [filter, supabase])
+
+  useEffect(() => {
+    if (!user) return
+    if (!isAdmin) {
+      router.push('/dashboard')
+      return
+    }
+    fetchGigs()
+  }, [user, isAdmin, fetchGigs, router])
 
   const updateGigStatus = async (gigId: string, status: 'approved' | 'rejected', notes?: string) => {
     setActionLoading(gigId)

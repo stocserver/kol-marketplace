@@ -7,9 +7,10 @@ const ALLOWED_MIME_TYPES = ['video/mp4']
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params
     const cookieStore = await cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -33,7 +34,7 @@ export async function POST(
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select('kol_id, status')
-      .eq('id', params.id)
+      .eq('id', resolvedParams.id)
       .single()
 
     if (orderError || !order) {
@@ -71,7 +72,7 @@ export async function POST(
     }
 
     // Upload file to Supabase Storage
-    const fileName = `${params.id}/${Date.now()}_${file.name}`
+    const fileName = `${resolvedParams.id}/${Date.now()}_${file.name}`
     const { error: uploadError } = await supabase.storage
       .from('order-files')
       .upload(fileName, file, {
@@ -93,7 +94,7 @@ export async function POST(
     const { data: fileRecord, error: dbError } = await supabase
       .from('order_files')
       .insert({
-        order_id: params.id,
+        order_id: resolvedParams.id,
         filename: file.name,
         file_url: publicUrl,
         file_size: file.size,
@@ -124,7 +125,7 @@ export async function POST(
       await supabase
         .from('order_messages')
         .insert({
-          order_id: params.id,
+          order_id: resolvedParams.id,
           sender_id: user.id,
           message: message,
           sender_name: senderName

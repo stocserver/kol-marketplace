@@ -73,7 +73,7 @@ export default function AdminPayoutsPage() {
       
       // Debug: Check each payout request structure
       if (data.payoutRequests) {
-        data.payoutRequests.forEach((req, index) => {
+        data.payoutRequests.forEach((req: any, index) => {
           console.log(`Payout request ${index}:`, {
             id: req.id,
             kol_id: req.kol_id,

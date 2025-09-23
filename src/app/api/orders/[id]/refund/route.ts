@@ -5,10 +5,11 @@ import { createRefund } from '@/lib/stripe/server'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { amount, reason } = await request.json()
+    const resolvedParams = await params
     const cookieStore = await cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -43,7 +44,7 @@ export async function POST(
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', resolvedParams.id)
       .single()
 
     if (orderError || !order) {
@@ -86,7 +87,7 @@ export async function POST(
         stripe_refund_id: refund.id,
         updated_at: new Date().toISOString()
       })
-      .eq('id', params.id)
+      .eq('id', resolvedParams.id)
 
     if (updateError) {
       console.error('Error updating order:', updateError)

@@ -23,18 +23,9 @@ export default function AdminDashboard() {
   const supabase = createClient()
 
   // Simple admin check - in production, you'd want proper role-based access control
-  const isAdmin = user?.email === 'admin@kolmarketplace.com' || 
-                  user?.email?.endsWith('@admin.com') || 
+  const isAdmin = user?.email === 'admin@kolmarketplace.com' ||
+                  user?.email?.endsWith('@admin.com') ||
                   user?.email === 'ivn.c.yu@gmail.com'
-
-  useEffect(() => {
-    if (!user) return
-    if (!isAdmin) {
-      router.push('/dashboard')
-      return
-    }
-    fetchStats()
-  }, [user, isAdmin, fetchStats, router])
 
   const fetchStats = useCallback(async () => {
     try {
@@ -68,6 +59,15 @@ export default function AdminDashboard() {
       setLoading(false)
     }
   }, [supabase])
+
+  useEffect(() => {
+    if (!user) return
+    if (!isAdmin) {
+      router.push('/dashboard')
+      return
+    }
+    fetchStats()
+  }, [user, isAdmin, fetchStats, router])
 
   if (!user || !isAdmin) {
     return (
@@ -106,7 +106,7 @@ export default function AdminDashboard() {
           <div className="bg-white p-6 rounded-lg shadow-sm">
             <h3 className="text-sm font-medium text-gray-500 mb-2">Pending Gigs</h3>
             <p className="text-3xl font-bold text-yellow-600">{stats?.pendingGigs || 0}</p>
-            {stats?.pendingGigs > 0 && (
+            {(stats?.pendingGigs ?? 0) > 0 && (
               <p className="text-sm text-yellow-600 mt-1">Requires attention</p>
             )}
           </div>
@@ -121,7 +121,7 @@ export default function AdminDashboard() {
           <div className="bg-white p-6 rounded-lg shadow-sm">
             <h3 className="text-sm font-medium text-gray-500 mb-2">Pending Payouts</h3>
             <p className="text-3xl font-bold text-orange-600">{stats?.pendingPayouts || 0}</p>
-            {stats?.pendingPayouts > 0 && (
+            {(stats?.pendingPayouts ?? 0) > 0 && (
               <p className="text-sm text-orange-600 mt-1">Requires approval</p>
             )}
           </div>
@@ -148,8 +148,8 @@ export default function AdminDashboard() {
                 <div>
                   <h3 className="font-medium text-gray-900">Review Gigs</h3>
                   <p className="text-sm text-gray-600">Approve or reject service offerings</p>
-                  {stats?.pendingGigs > 0 && (
-                    <p className="text-xs text-yellow-600 mt-1">{stats.pendingGigs} pending</p>
+                  {(stats?.pendingGigs ?? 0) > 0 && (
+                    <p className="text-xs text-yellow-600 mt-1">{stats?.pendingGigs} pending</p>
                   )}
                 </div>
               </div>
@@ -168,8 +168,8 @@ export default function AdminDashboard() {
                 <div>
                   <h3 className="font-medium text-gray-900">Manage Payouts</h3>
                   <p className="text-sm text-gray-600">Approve KOL payout requests</p>
-                  {stats?.pendingPayouts > 0 && (
-                    <p className="text-xs text-orange-600 mt-1">{stats.pendingPayouts} pending</p>
+                  {(stats?.pendingPayouts ?? 0) > 0 && (
+                    <p className="text-xs text-orange-600 mt-1">{stats?.pendingPayouts} pending</p>
                   )}
                 </div>
               </div>
