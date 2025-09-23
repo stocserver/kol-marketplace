@@ -354,7 +354,7 @@ export default function SponsorDashboard({ user }: SponsorDashboardProps) {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <div className="bg-blue-50 rounded-lg p-4">
                   <h4 className="text-sm font-medium text-blue-800 mb-2">Total Reach</h4>
-                  <p className="text-2xl font-bold text-blue-900">{user.analytics.total_reach.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-blue-900">{(user.analytics && typeof user.analytics === 'object' && 'total_reach' in user.analytics && typeof (user.analytics as any).total_reach === 'number' ? (user.analytics as any).total_reach : 0).toLocaleString()}</p>
                   <p className="text-sm text-blue-600">Across all orders</p>
                 </div>
                 <div className="bg-green-50 rounded-lg p-4">

@@ -20,7 +20,7 @@ interface KOLDashboardProps {
 export default function KOLDashboard({ user }: KOLDashboardProps) {
   const [activeTab, setActiveTab] = useState('orders')
   const { kolOrders, loading: ordersLoading, updateOrderStatus } = useOrders()
-  const [payoutRequests, setPayoutRequests] = useState<{id: string; amount: number; status: string; [key: string]: unknown}[]>([])
+  const [payoutRequests, setPayoutRequests] = useState<{id: string; amount: number; status: string; order_id: string; requested_at: string; reviewed_at?: string; kol_message?: string; admin_notes?: string; stripe_transfer_id?: string; orders?: { gig?: { title?: string } }; [key: string]: unknown}[]>([])
   const [payoutLoading, setPayoutLoading] = useState(false)
   
   // Calculate stats directly from the fetched orders (same source as the order list)
@@ -262,7 +262,7 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Rating</p>
-              <p className="text-2xl font-semibold text-gray-900">{user.rating}</p>
+              <p className="text-2xl font-semibold text-gray-900">{(typeof user.rating === 'number' ? user.rating.toFixed(1) : null) || 'N/A'}</p>
             </div>
           </div>
         </div>
@@ -421,16 +421,16 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {user.gigs.map((gig: {id: string; title: string; price: number; image?: string}) => (
+                {(Array.isArray(user.gigs) ? user.gigs : []).map((gig: {id: string; title: string; price: number; image?: string; orders?: number}) => (
                   <div key={gig.id} className="border border-gray-200 rounded-lg overflow-hidden">
                     <div className="aspect-video bg-gray-200 relative">
-                      <Image src={gig.image} alt={gig.title} className="w-full h-full object-cover" fill sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw" />
+                      <Image src={gig.image || '/api/placeholder/400/300'} alt={gig.title} className="w-full h-full object-cover" fill sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw" />
                     </div>
                     <div className="p-4">
                       <h4 className="font-semibold text-gray-900 mb-2">{gig.title}</h4>
                       <div className="flex items-center justify-between text-sm text-gray-600 mb-3">
                         <span>${gig.price}</span>
-                        <span>{gig.orders} orders</span>
+                        <span>{gig.orders || 0} orders</span>
                       </div>
                       <div className="flex space-x-2">
                         <button className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-2 rounded text-sm font-medium">
@@ -454,17 +454,17 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="bg-green-50 rounded-lg p-6">
                     <h4 className="text-sm font-medium text-green-800 mb-2">This Month</h4>
-                    <p className="text-3xl font-bold text-green-900">${user.monthly_earnings.toLocaleString()}</p>
+                    <p className="text-3xl font-bold text-green-900">${(typeof user.monthly_earnings === 'number' ? user.monthly_earnings : 0).toLocaleString()}</p>
                     <p className="text-sm text-green-600 mt-1">+15% from last month</p>
                   </div>
                   <div className="bg-blue-50 rounded-lg p-6">
                     <h4 className="text-sm font-medium text-blue-800 mb-2">Pending</h4>
-                    <p className="text-3xl font-bold text-blue-900">${user.pending_earnings.toLocaleString()}</p>
+                    <p className="text-3xl font-bold text-blue-900">${(typeof user.pending_earnings === 'number' ? user.pending_earnings : 0).toLocaleString()}</p>
                     <p className="text-sm text-blue-600 mt-1">Available in 7 days</p>
                   </div>
                   <div className="bg-purple-50 rounded-lg p-6">
                     <h4 className="text-sm font-medium text-purple-800 mb-2">Total Lifetime</h4>
-                    <p className="text-3xl font-bold text-purple-900">${user.total_earnings.toLocaleString()}</p>
+                    <p className="text-3xl font-bold text-purple-900">${(typeof user.total_earnings === 'number' ? user.total_earnings : 0).toLocaleString()}</p>
                   </div>
                 </div>
               </div>
@@ -472,7 +472,7 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
               <div className="bg-gray-50 rounded-lg p-6">
                 <h4 className="font-semibold text-gray-900 mb-4">Recent Transactions</h4>
                 <div className="space-y-3">
-                  {user.recent_transactions.map((transaction: {amount: number; date: string; type: string}, index: number) => (
+                  {(Array.isArray(user.recent_transactions) ? user.recent_transactions : []).map((transaction: {amount: number; date: string; type: string; description?: string; status?: string}, index: number) => (
                     <div key={index} className="flex items-center justify-between py-2">
                       <div>
                         <p className="font-medium text-gray-900">{transaction.description}</p>
@@ -650,11 +650,11 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-6">Recent Messages</h3>
               <div className="space-y-4">
-                {user.recent_messages.map((message: {id: string; from: string; preview: string; time: string}) => (
+                {(Array.isArray(user.recent_messages) ? user.recent_messages : []).map((message: {id: string; from: string; preview: string; time: string; timestamp: string; order_id: string; sender_image?: string; sender_name?: string}) => (
                   <div key={message.id} className="flex items-start space-x-4 p-4 bg-gray-50 rounded-lg">
                     <Image
-                      src={message.sender_image}
-                      alt={message.sender_name}
+                      src={message.sender_image || '/api/placeholder/40/40'}
+                      alt={message.sender_name || 'User'}
                       className="w-10 h-10 rounded-full object-cover"
                       width={40}
                       height={40}

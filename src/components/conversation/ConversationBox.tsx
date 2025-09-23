@@ -67,6 +67,39 @@ export default function ConversationBox({
   const messagesStartRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
 
+  const loadConversations = useCallback(async () => {
+    try {
+      const response = await fetch('/api/messages/conversations')
+      const data = await response.json()
+      if (response.ok) {
+        setConversations(data.conversations)
+      }
+    } catch (error) {
+      console.error('Failed to load conversations:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  const loadRecipientInfo = useCallback(async (recipientId: string) => {
+    try {
+      const { data: recipient, error } = await supabase
+        .from('profiles')
+        .select('id, username, full_name')
+        .eq('id', recipientId)
+        .single()
+
+      if (recipient && !error) {
+        setNewChatRecipient(recipient)
+        // Clear selected conversation to show new chat interface
+        setSelectedConversation('new-chat')
+        setMessages([])
+      }
+    } catch (error) {
+      console.error('Failed to load recipient info:', error)
+    }
+  }, [supabase])
+
   useEffect(() => {
     loadConversations()
   }, [loadConversations])
@@ -108,19 +141,17 @@ export default function ConversationBox({
         clearInterval(interval)
       }
     }
-  }, [currentUser, selectedConversation, checkForNewMessages])
+  }, [currentUser, selectedConversation])
 
   useEffect(() => {
     if (selectedConversation) {
       loadMessages(selectedConversation)
       // Mark this conversation as read
-      setUnreadConversations(prev => {
-        const newSet = new Set(prev)
-        newSet.delete(selectedConversation)
-        return newSet
-      })
+      const newSet = new Set(unreadConversations)
+      newSet.delete(selectedConversation)
+      setUnreadConversations(newSet)
     }
-  }, [selectedConversation, loadMessages, setUnreadConversations])
+  }, [selectedConversation, setUnreadConversations, unreadConversations])
 
   // Only auto-scroll when we specifically want to (new message sent/received)
   useEffect(() => {
@@ -200,7 +231,7 @@ export default function ConversationBox({
         if (selectedConversation) {
           console.log('Checking if selected conversation has new messages...')
           
-          const selectedConv = newConversations.find(conv => conv.id === selectedConversation)
+          const selectedConv = newConversations.find((conv: { id: string; last_message?: { id: string; content: string } }) => conv.id === selectedConversation)
           if (selectedConv?.last_message) {
             console.log('Selected conversation last message:', selectedConv.last_message.id, selectedConv.last_message.content)
             
@@ -239,44 +270,11 @@ export default function ConversationBox({
     } catch (error) {
       console.error('Failed to check for new messages:', error)
     }
-  }, [currentUser?.id, selectedConversation, setConversations, setMessages, loadMessagesOnly, setUnreadConversations, unreadConversations.size])
-
-  const loadRecipientInfo = useCallback(async (recipientId: string) => {
-    try {
-      const { data: recipient, error } = await supabase
-        .from('profiles')
-        .select('id, username, full_name')
-        .eq('id', recipientId)
-        .single()
-      
-      if (recipient && !error) {
-        setNewChatRecipient(recipient)
-        // Clear selected conversation to show new chat interface
-        setSelectedConversation('new-chat')
-        setMessages([])
-      }
-    } catch (error) {
-      console.error('Failed to load recipient info:', error)
-    }
-  }, [supabase])
-
-  const loadConversations = useCallback(async () => {
-    try {
-      const response = await fetch('/api/messages/conversations')
-      const data = await response.json()
-      if (response.ok) {
-        setConversations(data.conversations)
-      }
-    } catch (error) {
-      console.error('Failed to load conversations:', error)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  }, [currentUser?.id, selectedConversation, setConversations, setMessages, setUnreadConversations, unreadConversations.size])
 
   const loadMessages = useCallback(async (conversationId: string) => {
     loadMessagesOnly(conversationId)
-  }, [loadMessagesOnly])
+  }, [])
 
   const loadMessagesOnly = useCallback(async (conversationId: string, offset = 0, append = false) => {
     try {

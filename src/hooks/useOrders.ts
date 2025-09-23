@@ -39,6 +39,7 @@ export interface Order {
     full_name: string
     avatar_url?: string
   }
+  deliverables?: { name: string; url: string }[]
 }
 
 export function useOrders() {

@@ -42,9 +42,9 @@ interface MessagesAreaProps {
   onSendMessage: () => void
   onKeyPress: (e: React.KeyboardEvent) => void
   formatTime: (dateString: string) => string
-  messagesEndRef: React.RefObject<HTMLDivElement>
-  messagesStartRef: React.RefObject<HTMLDivElement>
-  messagesContainerRef: React.RefObject<HTMLDivElement>
+  messagesEndRef: React.RefObject<HTMLDivElement | null>
+  messagesStartRef: React.RefObject<HTMLDivElement | null>
+  messagesContainerRef: React.RefObject<HTMLDivElement | null>
   hasMoreMessages: boolean
   loadingOlderMessages: boolean
   onLoadOlderMessages: () => void

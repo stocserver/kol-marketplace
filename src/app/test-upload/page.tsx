@@ -174,7 +174,6 @@ export default function TestUploadPage() {
             <h2 className="text-lg font-semibold text-blue-900 mb-2">Current User</h2>
             <p className="text-blue-800">ID: {user.id}</p>
             <p className="text-blue-800">Email: {user.email}</p>
-            <p className="text-blue-800">Username: {user.username}</p>
           </div>
 
           {/* File Selection */}

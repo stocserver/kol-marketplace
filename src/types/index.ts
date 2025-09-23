@@ -63,6 +63,8 @@ export interface Profile {
   company_size?: string
   industry?: string
   website?: string
+  country?: string
+  response_time?: string
   total_campaigns?: number
   total_spent?: number
   gigs?: GigData[]
@@ -83,6 +85,7 @@ export interface Gig {
   delivery_days: number
   platform?: string
   fast_delivery?: boolean
+  revisions_included?: number
   is_active: boolean
   created_at: string
   updated_at: string
@@ -112,4 +115,5 @@ export interface Order {
   last_submission_message?: string
   last_submission_at?: string
   activities?: unknown[]
+  deliverables?: unknown[]
 }

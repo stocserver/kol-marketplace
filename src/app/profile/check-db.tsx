@@ -132,13 +132,13 @@ export default function CheckDbPage() {
             <p><strong>Full Name:</strong> {profileData.full_name}</p>
             <p><strong>User Type:</strong> {profileData.user_type}</p>
             <p><strong>Bio:</strong> {profileData.bio || 'Not set'}</p>
-            <p><strong>Country:</strong> {profileData.country || 'Not set'}</p>
+            <p><strong>Country:</strong> {(typeof profileData.country === 'string' ? profileData.country : null) || 'Not set'}</p>
             <p><strong>Languages:</strong> {profileData.languages ? JSON.stringify(profileData.languages) : 'Not set'}</p>
             <p><strong>Industry:</strong> {profileData.industry || 'Not set'}</p>
             <p><strong>Company Size:</strong> {profileData.company_size || 'Not set'}</p>
             <p><strong>Website:</strong> {profileData.website || 'Not set'}</p>
             <p><strong>Followers:</strong> {profileData.followers || 'Not set'}</p>
-            <p><strong>Response Time:</strong> {profileData.response_time || 'Not set'}</p>
+            <p><strong>Response Time:</strong> {(typeof profileData.response_time === 'string' ? profileData.response_time : null) || 'Not set'}</p>
             <p><strong>Platforms:</strong> {profileData.platforms ? JSON.stringify(profileData.platforms) : 'Not set'}</p>
             <p><strong>Created At:</strong> {profileData.created_at}</p>
             <p><strong>Updated At:</strong> {profileData.updated_at}</p>
