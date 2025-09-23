@@ -74,6 +74,7 @@ export default function ProfilePage() {
         // Transform database data to match component expectations
         const transformedUser = {
           id: profileData.id,
+          user_type: profileData.user_type,
           type: profileData.user_type,
           username: profileData.username,
           full_name: profileData.full_name,
@@ -84,6 +85,8 @@ export default function ProfilePage() {
           rating: 4.8, // TODO: Calculate from actual reviews
           total_orders: 0, // TODO: Count from actual orders
           member_since: profileData.created_at,
+          created_at: profileData.created_at,
+          updated_at: profileData.updated_at,
           languages: profileData.languages || [],
           platforms: profileData.platforms || {},
           // Sponsor specific fields
