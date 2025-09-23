@@ -39,10 +39,9 @@ export async function GET() {
                     user.email === 'ivn.c.yu@gmail.com'
 
     // Check if payout_requests table exists and has data
-    const { data: tableCheck, error: tableError } = await supabase
+    const { count: payoutCount, error: tableError } = await supabase
       .from('payout_requests')
-      .select('count(*)')
-      .limit(1)
+      .select('*', { count: 'exact', head: true })
 
     return NextResponse.json({
       success: true,
@@ -55,7 +54,7 @@ export async function GET() {
       profileError,
       tableExists: !tableError,
       tableError: tableError?.message,
-      payoutRequestsCount: tableCheck?.[0]?.count || 0
+      payoutRequestsCount: payoutCount || 0
     })
 
   } catch (error) {

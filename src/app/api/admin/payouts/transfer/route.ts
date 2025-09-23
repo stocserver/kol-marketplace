@@ -4,7 +4,7 @@ import { cookies } from 'next/headers'
 import Stripe from 'stripe'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
+  apiVersion: '2024-06-20' as Stripe.LatestApiVersion,
 })
 
 export async function POST(request: NextRequest) {
@@ -139,13 +139,13 @@ export async function POST(request: NextRequest) {
         .from('payout_requests')
         .update({
           status: 'failed',
-          admin_notes: `Transfer failed: ${stripeError.message}`
+          admin_notes: `Transfer failed: ${stripeError instanceof Error ? stripeError.message : String(stripeError)}`
         })
         .eq('id', payoutId)
 
       return NextResponse.json({
         error: 'Transfer failed',
-        details: stripeError.message
+        details: stripeError instanceof Error ? stripeError.message : String(stripeError)
       }, { status: 400 })
     }
 

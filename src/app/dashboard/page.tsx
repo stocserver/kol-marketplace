@@ -70,7 +70,7 @@ export default function DashboardPage() {
         }
 
         // Fetch dashboard-specific data based on user type
-        const dashboardData = {
+        const dashboardData: any = {
           orders: [],
           gigs: [],
           rating: 0,

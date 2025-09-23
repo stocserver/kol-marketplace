@@ -3,6 +3,7 @@
 import { useAuth } from '@/hooks/useAuth'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -73,7 +74,7 @@ export default function AdminPayoutsPage() {
       
       // Debug: Check each payout request structure
       if (data.payoutRequests) {
-        data.payoutRequests.forEach((req: any, index) => {
+        data.payoutRequests.forEach((req: PayoutRequest, index: number) => {
           console.log(`Payout request ${index}:`, {
             id: req.id,
             kol_id: req.kol_id,
@@ -91,7 +92,7 @@ export default function AdminPayoutsPage() {
         console.log('First payout request:', data.payoutRequests[0])
         
         // Debug: Check if KOL data is missing
-        const requestsWithoutKol = data.payoutRequests.filter(req => !req.profiles)
+        const requestsWithoutKol = data.payoutRequests.filter((req: PayoutRequest) => !req.profiles)
         if (requestsWithoutKol.length > 0) {
           console.warn('Payout requests missing KOL data:', requestsWithoutKol)
         }
@@ -280,9 +281,11 @@ export default function AdminPayoutsPage() {
                     <div className="flex-1">
                       {/* KOL Info */}
                       <div className="flex items-center space-x-3 mb-4">
-                        <img
+                        <Image
                           src={request.profiles?.avatar_url || '/api/placeholder/48/48'}
                           alt={request.profiles?.full_name || 'KOL'}
+                          width={48}
+                          height={48}
                           className="w-12 h-12 rounded-full object-cover"
                         />
                         <div className="flex-1">

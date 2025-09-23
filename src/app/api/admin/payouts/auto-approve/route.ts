@@ -4,7 +4,7 @@ import { cookies } from 'next/headers'
 import Stripe from 'stripe'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
+  apiVersion: '2024-06-20' as Stripe.LatestApiVersion,
 })
 
 // Auto-approve and process payout requests for completed orders
@@ -147,14 +147,14 @@ export async function POST() {
             .from('payout_requests')
             .update({
               status: 'failed',
-              admin_notes: `Auto-processing failed: ${error.message}`
+              admin_notes: `Auto-processing failed: ${error instanceof Error ? error.message : String(error)}`
             })
             .eq('id', payout.id)
 
           return {
             payoutId: payout.id,
             status: 'failed',
-            error: error.message
+            error: error instanceof Error ? error.message : String(error)
           }
         }
       })

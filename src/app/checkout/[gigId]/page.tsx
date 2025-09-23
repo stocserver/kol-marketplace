@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
+import { Gig } from '@/types'
 import OrderReview from '@/components/checkout/OrderReview'
 import StripeProvider from '@/components/checkout/StripeProvider'
 import StripePaymentForm from '@/components/checkout/StripePaymentForm'
@@ -17,7 +18,7 @@ interface CheckoutData {
 export default function CheckoutPage() {
   const params = useParams()
   const router = useRouter()
-  const [gig, setGig] = useState<typeof mockGig | null>(null)
+  const [gig, setGig] = useState<Gig | null>(null)
   const [gigLoading, setGigLoading] = useState(true)
   const supabase = createClient()
   const [checkoutData, setCheckoutData] = useState<CheckoutData>({
@@ -28,6 +29,7 @@ export default function CheckoutPage() {
   const [processing, setProcessing] = useState(false)
   const [clientSecret, setClientSecret] = useState<string>('')
   const [orderId, setOrderId] = useState<string>('')
+  const [paymentError, setPaymentError] = useState<string>('')
 
   useEffect(() => {
     const loadGigAndCheckoutData = async () => {
@@ -185,7 +187,6 @@ export default function CheckoutPage() {
             checkoutData={checkoutData}
             onDataChange={setCheckoutData}
             totalPrice={totalPrice}
-            basePrice={basePrice}
             onContinue={handleCreateOrder}
           />
         )
@@ -247,7 +248,7 @@ export default function CheckoutPage() {
         <div className="bg-white rounded-lg p-6 shadow-sm mb-6">
           <div className="flex items-center space-x-4">
             <Image
-              src={gig.preview_image_url || '/images/default-gig.jpg'}
+              src={'/images/default-gig.jpg'}
               alt={gig.title}
               width={80}
               height={80}
@@ -259,14 +260,14 @@ export default function CheckoutPage() {
               <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600">
                 <div className="flex items-center space-x-2">
                   <Image
-                    src={gig.kol.profile_image || '/images/default-avatar.jpg'}
-                    alt={gig.kol.full_name || 'KOL Profile'}
+                    src={gig.kol?.avatar_url || '/images/default-avatar.jpg'}
+                    alt={gig.kol?.full_name || 'KOL Profile'}
                     width={24}
                     height={24}
                     className="w-6 h-6 rounded-full"
                     style={{objectFit: 'cover'}}
                   />
-                  <span>@{gig.kol.username}</span>
+                  <span>@{gig.kol?.username || 'unknown'}</span>
                 </div>
                 <div>Delivery: {gig.delivery_days} days</div>
               </div>
