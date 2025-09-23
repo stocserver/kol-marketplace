@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import ConversationBox from '@/components/conversation/ConversationBox'
 
-export default function MessagesPage() {
+function MessagesContent() {
   const [currentUser, setCurrentUser] = useState<{ id: string; username: string; full_name: string } | null>(null)
   const [unreadConversations, setUnreadConversations] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
@@ -66,5 +66,17 @@ export default function MessagesPage() {
         setStartNewChat={setStartNewChat}
       />
     </div>
+  )
+}
+
+export default function MessagesPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    }>
+      <MessagesContent />
+    </Suspense>
   )
 }
