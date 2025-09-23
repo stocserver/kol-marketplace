@@ -208,33 +208,35 @@ export default function DatabaseDebugPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {Object.entries(results).map(([tableName, data]: [string, Record<string, unknown>]) => (
+          {Object.entries(results).map(([tableName, data]) => {
+            const tableData = data as { exists: boolean; error?: string; count?: number; schema?: Record<string, unknown>; sample?: Record<string, unknown>[] }
+            return (
             <div key={tableName} className="bg-white rounded-lg shadow p-6">
               <h2 className="text-lg font-semibold mb-3 flex items-center">
-                {data.exists ? '✅' : '❌'} {tableName}
+                {tableData.exists ? '✅' : '❌'} {tableName}
               </h2>
               
-              {data.error && (
+              {tableData.error && (
                 <div className="bg-red-50 border border-red-200 rounded p-3 mb-3">
                   <p className="text-red-700 text-sm">
-                    <strong>Error:</strong> {data.error}
+                    <strong>Error:</strong> {tableData.error}
                   </p>
                 </div>
               )}
               
-              {data.exists && (
+              {tableData.exists && (
                 <div className="space-y-2">
                   <p className="text-sm text-gray-600">
-                    <strong>Records:</strong> {data.count}
+                    <strong>Records:</strong> {tableData.count}
                   </p>
-                  
-                  {data.sampleData && (
+
+                  {tableData.sample && (
                     <details className="text-sm">
                       <summary className="cursor-pointer text-blue-600 hover:text-blue-800">
                         Sample data
                       </summary>
                       <pre className="mt-2 bg-gray-50 p-2 rounded text-xs overflow-auto">
-                        {JSON.stringify(data.sampleData, null, 2)}
+                        {JSON.stringify(tableData.sample, null, 2)}
                       </pre>
                     </details>
                   )}
@@ -243,31 +245,38 @@ export default function DatabaseDebugPage() {
               
               {tableName === 'functions' && (
                 <div className="mt-3">
-                  {Object.entries(data).map(([funcName, funcData]: [string, Record<string, unknown>]) => (
+                  {Object.entries(tableData).map(([funcName, funcData]) => {
+                    const func = funcData as Record<string, unknown>
+                    return (
                     <div key={funcName} className="mb-2">
                       <p className="text-sm">
-                        <strong>{funcName}:</strong> {funcData.exists ? '✅' : '❌'}
+                        <strong>{funcName}:</strong> {func.exists ? '✅' : '❌'}
                       </p>
-                      {funcData.error && (
-                        <p className="text-xs text-red-600">{funcData.error}</p>
-                      )}
+                      {func.error ? (
+                        <p className="text-xs text-red-600">{String(func.error)}</p>
+                      ) : null}
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
               
-              {tableName === 'auth' && (
+              {tableName === 'auth' && (() => {
+                const authData = tableData as { user?: { email: string; id: string } }
+                return (
                 <div className="mt-3">
                   <p className="text-sm">
-                    <strong>Current user:</strong> {data.user ? `${data.user.email} (${data.user.id})` : 'Not logged in'}
+                    <strong>Current user:</strong> {authData.user ? `${authData.user.email} (${authData.user.id})` : 'Not logged in'}
                   </p>
-                  {data.error && (
-                    <p className="text-xs text-red-600">{data.error}</p>
+                  {tableData.error && (
+                    <p className="text-xs text-red-600">{tableData.error}</p>
                   )}
                 </div>
-              )}
+                )
+              })()}
             </div>
-          ))}
+            )
+          })}
         </div>
       </div>
     </div>

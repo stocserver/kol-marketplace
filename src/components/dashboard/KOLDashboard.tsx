@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useOrders } from '@/hooks/useOrders'
 
-interface KOLUser {
+export interface KOLUser {
   id: string
   username?: string
   full_name?: string

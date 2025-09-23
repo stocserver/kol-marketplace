@@ -89,7 +89,7 @@ export default function OrderDetailPage() {
     ]
 
     // Add work-related steps based on current status
-    if ([ORDER_STATUSES.IN_PROGRESS, ORDER_STATUSES.SUBMITTED, ORDER_STATUSES.REVISION, ORDER_STATUSES.DELIVERED, ORDER_STATUSES.COMPLETED].includes(currentStatus)) {
+    if (([ORDER_STATUSES.IN_PROGRESS, ORDER_STATUSES.SUBMITTED, ORDER_STATUSES.REVISION, ORDER_STATUSES.DELIVERED, ORDER_STATUSES.COMPLETED] as string[]).includes(currentStatus)) {
       baseSteps.push({
         id: 3,
         type: 'work_started',
@@ -140,43 +140,31 @@ export default function OrderDetailPage() {
           title: `Work Submitted (${ordinal} Submission)`,
           description: `${orderData.kol?.full_name || orderData.kol?.username || 'KOL'} submitted the ${ordinal} version of work`,
           timestamp: submission.submitted_at,
-          status: 'completed',
-          submissionData: {
-            number: submission.submission_number,
-            ordinal: ordinal,
-            message: submission.message,
-            sender: orderData.kol?.full_name || orderData.kol?.username || 'KOL'
-          }
+          status: 'completed'
         })
       })
     } else if (submissionsError) {
       // Fallback: If submissions table doesn't exist, check if order status indicates submission
       console.log('📊 Fallback: checking order data for submissions', {
         status: currentStatus,
-        submission_count: orderData.submission_count,
-        last_submission_message: orderData.last_submission_message,
-        last_submission_at: orderData.last_submission_at
+        submission_count: (orderData as any).submission_count,
+        last_submission_message: (orderData as any).last_submission_message,
+        last_submission_at: (orderData as any).last_submission_at
       })
 
-      if (orderData.submission_count && orderData.submission_count > 0) {
-        const ordinal = orderData.submission_count === 1 ? '1st' :
-                       orderData.submission_count === 2 ? '2nd' :
-                       orderData.submission_count === 3 ? '3rd' :
-                       `${orderData.submission_count}th`
+      if ((orderData as any).submission_count && (orderData as any).submission_count > 0) {
+        const ordinal = (orderData as any).submission_count === 1 ? '1st' :
+                       (orderData as any).submission_count === 2 ? '2nd' :
+                       (orderData as any).submission_count === 3 ? '3rd' :
+                       `${(orderData as any).submission_count}th`
 
         baseSteps.push({
           id: nextId++,
           type: 'work_submitted',
           title: `Work Submitted (${ordinal} Submission)`,
           description: `${orderData.kol?.full_name || orderData.kol?.username || 'KOL'} submitted the ${ordinal} version of work`,
-          timestamp: orderData.last_submission_at,
-          status: 'completed',
-          submissionData: {
-            number: orderData.submission_count,
-            ordinal: ordinal,
-            message: orderData.last_submission_message || 'Work submitted for review',
-            sender: orderData.kol?.full_name || orderData.kol?.username || 'KOL'
-          }
+          timestamp: (orderData as any).last_submission_at,
+          status: 'completed'
         })
       } else if (currentStatus === 'submitted') {
         // If status is submitted but no submission data, show generic submission

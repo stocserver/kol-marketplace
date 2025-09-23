@@ -13,6 +13,17 @@ export default function MessagesPage() {
   const searchParams = useSearchParams()
   const supabase = createClient()
 
+  const getCurrentUser = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    setCurrentUser(user as { id: string; username: string; full_name: string } | null)
+    setLoading(false)
+
+    // Request notification permission
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+  }
+
   useEffect(() => {
     getCurrentUser()
   }, [getCurrentUser])
@@ -24,17 +35,6 @@ export default function MessagesPage() {
       setStartNewChat(recipientId)
     }
   }, [searchParams, currentUser])
-
-  const getCurrentUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    setCurrentUser(user)
-    setLoading(false)
-    
-    // Request notification permission
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission()
-    }
-  }
 
   if (loading) {
     return (

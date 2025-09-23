@@ -159,7 +159,7 @@ export default function GigDetailPage() {
           <GigGallery gig={gig} />
           <GigDescription gig={gig} />
           <GigSpecs gig={gig} />
-          <SocialMediaLinks socialLinks={gig.kol.platforms || {}} kolName={gig.kol.full_name} />
+          <SocialMediaLinks socialLinks={(gig.kol.platforms as { [platform: string]: string }) || {}} kolName={gig.kol.full_name} />
           <KOLProfile kol={gig.kol} />
           <ReviewsList kolId={gig.kol_id} showGigTitle={true} limit={5} />
         </div>

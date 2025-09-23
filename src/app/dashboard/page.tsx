@@ -4,13 +4,29 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useRole } from '@/contexts/RoleContext'
-import KOLDashboard from '@/components/dashboard/KOLDashboard'
-import SponsorDashboard from '@/components/dashboard/SponsorDashboard'
+import KOLDashboard, { KOLUser } from '@/components/dashboard/KOLDashboard'
+import SponsorDashboard, { SponsorUser } from '@/components/dashboard/SponsorDashboard'
+
+interface DashboardData {
+  orders: Record<string, unknown>[]
+  gigs: Record<string, unknown>[]
+  rating: number
+  total_orders: number
+  active_orders: number
+  completed_orders: number
+  total_earnings: number
+  total_spent: number
+  monthly_earnings: number
+  pending_earnings: number
+  recent_transactions: Record<string, unknown>[]
+  favorite_kols: Record<string, unknown>[]
+  recent_messages: Record<string, unknown>[]
+}
 
 
 export default function DashboardPage() {
   const { currentRole } = useRole()
-  const [user, setUser] = useState<Record<string, unknown> | null>(null)
+  const [user, setUser] = useState<KOLUser | SponsorUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const router = useRouter()
@@ -70,7 +86,7 @@ export default function DashboardPage() {
         }
 
         // Fetch dashboard-specific data based on user type
-        const dashboardData: any = {
+        const dashboardData: DashboardData = {
           orders: [],
           gigs: [],
           rating: 0,
@@ -287,7 +303,6 @@ export default function DashboardPage() {
           company_size: profileData.company_size,
           industry: profileData.industry,
           website: profileData.website,
-          total_spent: dashboardData.total_spent || 0, // Amount spent by sponsor on orders
 
           // Real dashboard data
           ...dashboardData

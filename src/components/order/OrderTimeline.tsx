@@ -17,14 +17,6 @@ interface Activity {
   }
 }
 
-interface OrderFile {
-  id: string
-  filename: string
-  file_url: string
-  file_size: number
-  created_at: string
-}
-
 interface OrderTimelineProps {
   activities: Activity[]
 }

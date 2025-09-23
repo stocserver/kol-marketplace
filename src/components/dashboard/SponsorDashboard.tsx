@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useOrders } from '@/hooks/useOrders'
 
-interface SponsorUser {
+export interface SponsorUser {
   id: string
   username?: string
   full_name?: string
