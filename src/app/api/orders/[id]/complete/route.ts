@@ -4,12 +4,21 @@ import { cookies } from 'next/headers'
 import { sendOrderCompletedEmail, isEmailConfigured } from '@/lib/email'
 import { createServiceClient } from '@/lib/supabase/admin'
 import { notifyUser } from '@/lib/notifications'
+export const runtime = 'nodejs'
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    type OrderWithGig = {
+      id: string
+      sponsor_id: string
+      kol_id: string
+      amount: number
+      status: string
+      gigs?: { id: string; title?: string | null; kol_id: string }
+    }
     const resolvedParams = await params
     const orderId = resolvedParams.id
     const cookieStore = await cookies()
@@ -105,6 +114,9 @@ export async function POST(
         if (kolEmail) {
           const orderUrlBase = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
           const orderUrl = `${orderUrlBase}/orders/${orderId}`
+          // Derive title safely without using 'any'
+          const og = order as OrderWithGig
+          const gigTitle = og.gigs?.title ?? undefined
           await sendOrderCompletedEmail({
             to: kolEmail,
             orderId,
@@ -112,7 +124,7 @@ export async function POST(
             currency: 'USD',
             orderUrl,
             sponsorName: undefined,
-            gigTitle: (order as any)?.gigs?.title,
+            gigTitle,
           })
           console.log('Order completed email dispatched to KOL')
         } else {

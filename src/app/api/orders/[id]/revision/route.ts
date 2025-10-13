@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 import { sendRevisionRequestedEmail, isEmailConfigured } from '@/lib/email'
 import { notifyUser } from '@/lib/notifications'
 import { createServiceClient } from '@/lib/supabase/admin'
+export const runtime = 'nodejs'
 
 export async function POST(
   request: NextRequest,

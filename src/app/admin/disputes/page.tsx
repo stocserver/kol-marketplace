@@ -318,7 +318,7 @@ export default function AdminDisputesPage() {
                       </Link>
                     </div>
                     <p className="text-xs text-purple-700 mb-2">
-                      Click "Open Order" to view the full order page where you can see the chat history between sponsor and KOL, and participate in the conversation to help mediate this dispute.
+                      Click &quot;Open Order&quot; to view the full order page where you can see the chat history between sponsor and KOL, and participate in the conversation to help mediate this dispute.
                     </p>
                     <div className="flex items-center space-x-2 text-xs text-purple-600">
                       <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">

@@ -1,12 +1,13 @@
 ﻿import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+export const runtime = 'nodejs'
 
 async function handle(req: NextRequest) {
   const requestUrl = new URL(req.url)
   const code = requestUrl.searchParams.get('code')
   const cookieStore = await cookies()
-  const cookiesToSet: { name: string; value: string; options?: any }[] = []
+  const cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[] = []
 
   // Debug logging
   const cookieHeader = req.headers.get('cookie') || ''

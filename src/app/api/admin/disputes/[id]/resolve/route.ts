@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { createRefund } from '@/lib/stripe/server'
+export const runtime = 'nodejs'
 
 export async function POST(
   request: NextRequest,
@@ -65,7 +66,12 @@ export async function POST(
       return NextResponse.json({ error: 'Dispute already resolved' }, { status: 400 })
     }
 
-    const order = dispute.order as any
+    type OrderRow = {
+      id: string
+      amount: number
+      stripe_payment_intent_id?: string | null
+    }
+    const order = dispute.order as OrderRow | null
 
     if (!order) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
@@ -125,7 +131,7 @@ export async function POST(
     }
 
     // Update order status and refund info
-    const orderUpdate: any = {
+    const orderUpdate: { status: string; updated_at: string; refund_amount?: number; stripe_refund_id?: string } = {
       status: newOrderStatus,
       updated_at: new Date().toISOString()
     }

@@ -1,10 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNotifications } from '@/hooks/useNotifications'
 import { useAuth } from '@/hooks/useAuth'
 import { createClient } from '@/lib/supabase/client'
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 
 type NotificationType = 'order_received' | 'revision_requested' | 'order_submitted' | 'order_completed' | 'order_disputed'
 
@@ -101,7 +102,7 @@ export default function NotificationsPage() {
     title: string
     body: string | null
     target_path: string | null
-    meta: any
+    meta: Record<string, unknown> | null
     created_at: string
     seen_at: string | null
     read_at: string | null
@@ -152,12 +153,13 @@ export default function NotificationsPage() {
       if (reset) setPage(1)
       else setPage(p => p + 1)
       setError(null)
-    } catch (e: any) {
-      setError(e?.message || 'Failed to load notifications')
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to load notifications'
+      setError(message)
     } finally {
       setLoading(false)
     }
-  }, [page, pageSize, supabase, user])
+  }, [page, pageSize, supabase, user, mapRow])
 
   useEffect(() => {
     if (!authLoading) {
@@ -175,13 +177,13 @@ export default function NotificationsPage() {
         schema: 'public',
         table: 'notifications',
         filter: `user_id=eq.${user.id}`
-      }, (payload: any) => {
+      }, (payload: RealtimePostgresChangesPayload<DbNotification>) => {
         const n = payload.new as DbNotification
         setItems(prev => [mapRow(n), ...prev])
       })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [supabase, user])
+  }, [supabase, user, mapRow])
 
   const markRead = async (id: string) => {
     try {

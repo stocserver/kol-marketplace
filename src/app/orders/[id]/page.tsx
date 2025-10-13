@@ -347,15 +347,16 @@ export default function OrderDetailPage() {
 
         console.log('Basic order query result:', { basicOrder, basicError })
 
-        const isRealError = !!(basicError && ((basicError as any).code || (basicError as any).message || (basicError as any).details || (basicError as any).hint))
+        const isRealError = !!(basicError && (Object.prototype.hasOwnProperty.call(basicError, 'code') || Object.prototype.hasOwnProperty.call(basicError, 'message') || Object.prototype.hasOwnProperty.call(basicError, 'details') || Object.prototype.hasOwnProperty.call(basicError, 'hint')))
         if (isRealError) {
           console.error('Basic order fetch error:', basicError)
-          const code = (basicError as any).code
-          const msg = (basicError as any).message
-          if (code === 'PGRST116') {
+          // Best-effort narrow of error shape without using 'any'
+          const errCode = (basicError as { code?: string } | null | undefined)?.code
+          const errMsg = (basicError as { message?: string } | null | undefined)?.message
+          if (errCode === 'PGRST116') {
             setError('Order not found')
           } else {
-            setError(`Failed to load order: ${msg || 'Unknown error'}`)
+            setError(`Failed to load order: ${errMsg || 'Unknown error'}`)
           }
           return
         }

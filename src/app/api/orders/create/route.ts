@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { createPaymentIntent } from '@/lib/stripe/server'
 import { notifyUser } from '@/lib/notifications'
+export const runtime = 'nodejs'
 
 export async function POST(request: NextRequest) {
   try {

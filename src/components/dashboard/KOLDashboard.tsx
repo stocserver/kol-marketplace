@@ -55,12 +55,13 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
   }
 
   // Tab counts for quick visibility
+  const u = user as { recent_transactions?: unknown; recent_messages?: unknown }
   const counts = {
     orders: kolOrders.length,
     gigs: dashboardGigs.length,
-    earnings: Array.isArray((user as any).recent_transactions) ? (user as any).recent_transactions.length : 0,
+    earnings: Array.isArray(u.recent_transactions) ? u.recent_transactions.length : 0,
     payouts: payoutRequests.length,
-    messages: Array.isArray((user as any).recent_messages) ? (user as any).recent_messages.length : 0,
+    messages: Array.isArray(u.recent_messages) ? u.recent_messages.length : 0,
   }
   
   console.log('KOL Dashboard Stats:', {

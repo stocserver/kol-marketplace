@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
+import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 
 export function useNotifications() {
   const supabase = createClient()
@@ -14,7 +15,7 @@ export function useNotifications() {
 
   // Initial load + realtime subscription
   useEffect(() => {
-    let channel: any = null
+    let channel: RealtimeChannel | null = null
     let mounted = true
 
     async function load() {
@@ -34,7 +35,7 @@ export function useNotifications() {
 
         if (!mounted) return
         setCount(unseenCount || 0)
-      } catch (_) {
+      } catch {
         // table might not exist yet in some environments; fail silently
         if (!mounted) return
         setCount(0)
@@ -58,9 +59,9 @@ export function useNotifications() {
             schema: 'public',
             table: 'notifications',
             filter: `user_id=eq.${user.id}`
-          }, (payload: any) => {
-            const next = payload?.new
-            const prev = payload?.old
+          }, (payload: RealtimePostgresChangesPayload<{ seen_at: string | null; deleted_at: string | null }>) => {
+            const next = payload.new
+            const prev = payload.old
             // If a notification transitioned from unseen to seen, reduce count.
             const becameSeen = (!prev?.seen_at && !!next?.seen_at) && !next?.deleted_at
             const gotDeletedUnseen = (!next?.seen_at && !!next?.deleted_at)
@@ -69,7 +70,7 @@ export function useNotifications() {
             }
           })
           .subscribe()
-      } catch (_) {
+      } catch {
         // ignore realtime wiring failures
       }
     }
@@ -94,7 +95,7 @@ export function useNotifications() {
         .is('seen_at', null)
         .is('deleted_at', null)
       setCount(0)
-    } catch (_) {
+    } catch {
       // ignore
     }
   }

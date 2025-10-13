@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 
 interface OrderChatProps {
@@ -34,7 +35,7 @@ export default function OrderChat({ orderId }: OrderChatProps) {
   }
 
   useEffect(() => {
-    let channel: any
+    let channel: RealtimeChannel | null
     const loadMessages = async () => {
       try {
         // Get current user

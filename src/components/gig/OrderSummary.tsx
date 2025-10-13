@@ -127,7 +127,7 @@ export default function OrderSummary({ gig }: OrderSummaryProps) {
         </div>
         <div className="mt-3 pt-3 border-t border-gray-200">
           <p className="text-xs text-gray-500">
-            <span className="font-medium">Refund policy:</span> If order is cancelled via dispute, you'll receive ${basePrice.toFixed(2)} back (base price only).
+            <span className="font-medium">Refund policy:</span> If order is cancelled via dispute, you&apos;ll receive ${basePrice.toFixed(2)} back (base price only).
           </p>
         </div>
       </div>

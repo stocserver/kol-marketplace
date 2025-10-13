@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { sendOrderDeliveredEmail, isEmailConfigured } from '@/lib/email'
 import { notifyUser } from '@/lib/notifications'
+export const runtime = 'nodejs'
 import { createServiceClient } from '@/lib/supabase/admin'
 
 export async function POST(

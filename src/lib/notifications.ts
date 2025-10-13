@@ -10,10 +10,10 @@ export type NotifyUserInput = {
   title: string
   body?: string
   targetPath?: string
-  meta?: Record<string, any>
+  meta?: Record<string, unknown>
 }
 
-export async function notifyUser(input: NotifyUserInput) {
+export async function notifyUser(input: NotifyUserInput): Promise<{ ok: boolean; error?: unknown }> {
   try {
     const admin = createServiceClient()
     const { error } = await admin
