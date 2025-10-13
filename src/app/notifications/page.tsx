@@ -117,7 +117,7 @@ export default function NotificationsPage() {
   const [hasMore, setHasMore] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
 
-  const mapRow = (n: DbNotification): NotificationItem => ({
+  const mapRow = useCallback((n: DbNotification): NotificationItem => ({
     id: n.id,
     type: n.type,
     title: n.title,
@@ -126,7 +126,7 @@ export default function NotificationsPage() {
     read: !!n.read_at,
     seen: !!n.seen_at,
     targetPath: n.target_path ?? '/'
-  })
+  }), [])
 
   const load = useCallback(async (reset = false) => {
     if (!user) {

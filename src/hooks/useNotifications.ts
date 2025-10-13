@@ -60,11 +60,12 @@ export function useNotifications() {
             table: 'notifications',
             filter: `user_id=eq.${user.id}`
           }, (payload: RealtimePostgresChangesPayload<{ seen_at: string | null; deleted_at: string | null }>) => {
-            const next = payload.new
-            const prev = payload.old
+            type RowPartial = Partial<{ seen_at: string | null; deleted_at: string | null }>
+            const next = (payload.new ?? {}) as RowPartial
+            const prev = (payload.old ?? {}) as RowPartial
             // If a notification transitioned from unseen to seen, reduce count.
-            const becameSeen = (!prev?.seen_at && !!next?.seen_at) && !next?.deleted_at
-            const gotDeletedUnseen = (!next?.seen_at && !!next?.deleted_at)
+            const becameSeen = (!prev.seen_at && !!next.seen_at) && !next.deleted_at
+            const gotDeletedUnseen = (!next.seen_at && !!next.deleted_at)
             if (becameSeen || gotDeletedUnseen) {
               setCount((c) => Math.max(0, c - 1))
             }
@@ -83,7 +84,7 @@ export function useNotifications() {
         supabase.removeChannel(channel)
       }
     }
-  }, [authLoading, supabase, user?.id])
+  }, [authLoading, supabase, user])
 
   const markAllSeen = async () => {
     if (!user) return
