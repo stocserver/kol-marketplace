@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { createPaymentIntent } from '@/lib/stripe/server'
+import { notifyUser } from '@/lib/notifications'
 
 export async function POST(request: NextRequest) {
   try {
@@ -74,18 +75,37 @@ export async function POST(request: NextRequest) {
     
     console.log('Creating order for gig:', gig.id, 'KOL:', gig.kol.username, 'Buyer:', buyerProfile.username)
 
-    // Calculate fees (15% platform fee)
-    const amount = gig.price
+    // Calculate fees
+    const baseAmount = gig.price // Base order amount in whole currency units (integer)
+
+    // Calculate Stripe fee (2.9% + $0.30) as decimal columns
+    const stripeFeePercentage = 0.029
+    const stripeFeeFixed = 0.30
+    const stripeFee = Math.round((baseAmount * stripeFeePercentage + stripeFeeFixed) * 100) / 100
+
+    // Calculate 1% service fee as decimal column
+    const serviceFeePercentage = 0.01
+    const serviceFee = Math.round(baseAmount * serviceFeePercentage * 100) / 100
+
+    // Total amount to charge sponsor (decimal)
+    const totalAmount = baseAmount + stripeFee + serviceFee
+
+    // Platform fee (15% of base amount) stored as integer in orders table
     const platformFeePercentage = 0.15
-    const platformFee = Math.round(amount * platformFeePercentage)
-    const kolEarnings = amount - platformFee
+    const platformFee = Math.round(baseAmount * platformFeePercentage)
+
+    // KOL earnings (integer): base minus platform fee
+    const kolEarnings = baseAmount - platformFee
 
     // Create order record
     console.log('✅ Creating order record...', {
       gigId,
       sponsorId: user.id,
       kolId: gig.kol_id,
-      amount,
+      baseAmount,
+      stripeFee,
+      serviceFee,
+      totalAmount,
       platformFee,
       kolEarnings
     })
@@ -97,11 +117,14 @@ export async function POST(request: NextRequest) {
         sponsor_id: user.id,
         kol_id: gig.kol_id,
         status: 'pending',
-        amount: amount,
+        amount: baseAmount, // Store base order amount
         platform_fee: platformFee,
         kol_earnings: kolEarnings,
         requirements: requirements || null,
-        stripe_application_fee: platformFee
+        stripe_application_fee: platformFee,
+        stripe_fee: stripeFee, // Store Stripe fee
+        service_fee: serviceFee, // Store service fee
+        total_amount: totalAmount // Store total charged amount
       })
       .select()
       .single()
@@ -112,12 +135,11 @@ export async function POST(request: NextRequest) {
     }
     console.log('✅ Order created:', order.id)
 
-    // Create Stripe payment intent - charge full amount to platform
-    // Payouts to KOL will be handled separately based on DB calculations
-    console.log('✅ Creating payment intent for amount:', amount)
-    const paymentIntent = await createPaymentIntent(amount)
+    // Create Stripe payment intent - charge total amount including fees
+    console.log('✅ Creating payment intent for total amount:', totalAmount)
+    const paymentIntent = await createPaymentIntent(totalAmount)
     console.log('✅ Payment intent created:', paymentIntent.id)
-    
+
     // Update order with payment intent
     await supabase
       .from('orders')
@@ -131,16 +153,33 @@ export async function POST(request: NextRequest) {
         order_id: order.id,
         stripe_payment_intent_id: paymentIntent.id,
         status: 'created',
-        amount: amount,
+        amount: totalAmount,
         application_fee_amount: platformFee
       })
+
+    // Create in-app notification for KOL (order received)
+    try {
+      await notifyUser({
+        userId: gig.kol_id,
+        type: 'order_received',
+        title: 'New order received',
+        body: `${gig.title || 'A service'} — Order #${order.id}`,
+        targetPath: `/orders/${order.id}`,
+        meta: { orderId: order.id, gigId, sponsorId: user.id },
+      })
+    } catch (e) {
+      console.warn('Failed to create KOL order_received notification:', e)
+    }
 
     console.log('✅ Order created successfully:', order.id)
 
     return NextResponse.json({
       orderId: order.id,
       clientSecret: paymentIntent.client_secret,
-      amount: amount,
+      baseAmount: baseAmount,
+      stripeFee: stripeFee,
+      serviceFee: serviceFee,
+      totalAmount: totalAmount,
       platformFee: platformFee,
       kolEarnings: kolEarnings
     })

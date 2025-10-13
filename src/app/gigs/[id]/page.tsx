@@ -52,6 +52,7 @@ export default function GigDetailPage() {
   const [gig, setGig] = useState<Gig | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [visibilityNotice, setVisibilityNotice] = useState<string | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -61,6 +62,7 @@ export default function GigDetailPage() {
       try {
         setLoading(true)
         setError(null)
+        setVisibilityNotice(null)
         
         const { data, error: fetchError } = await supabase
           .from('gigs')
@@ -80,8 +82,6 @@ export default function GigDetailPage() {
             )
           `)
           .eq('id', params.id)
-          .eq('is_active', true)
-          .eq('approval_status', 'approved')
           .single()
 
         if (fetchError) {
@@ -94,6 +94,52 @@ export default function GigDetailPage() {
           return
         }
 
+        if (!data) {
+          setError('Gig not found or not available')
+          return
+        }
+
+        let noticeMessage: string | null = null
+
+        if (!data.is_active || data.approval_status !== 'approved') {
+          try {
+            const { data: authData } = await supabase.auth.getUser()
+            const currentUser = authData?.user
+            let isOwner = false
+            let isAdmin = false
+
+            if (currentUser) {
+              isOwner = currentUser.id === data.kol_id
+
+              if (!isOwner) {
+                const { data: viewerProfile } = await supabase
+                  .from('profiles')
+                  .select('user_type')
+                  .eq('id', currentUser.id)
+                  .single()
+
+                isAdmin = viewerProfile?.user_type === 'admin'
+              }
+            }
+
+            if (!isOwner && !isAdmin) {
+              setError('Gig not found or not available')
+              return
+            }
+
+            if (!data.is_active) {
+              noticeMessage = 'This gig is currently inactive and only visible to you.'
+            } else if (data.approval_status !== 'approved') {
+              noticeMessage = 'This gig is pending approval and not yet visible in the marketplace.'
+            }
+          } catch (viewerError) {
+            console.error('Error verifying gig visibility:', viewerError)
+            setError('Failed to load gig details')
+            return
+          }
+        }
+
+        setVisibilityNotice(noticeMessage)
         setGig(data as Gig)
       } catch (err) {
         console.error('Error:', err)
@@ -152,6 +198,11 @@ export default function GigDetailPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {visibilityNotice && (
+        <div className="mb-6 rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-yellow-800">
+          <p className="text-sm font-medium">{visibilityNotice}</p>
+        </div>
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column - Main Content */}
         <div className="lg:col-span-2 space-y-8">

@@ -59,7 +59,7 @@ const ORDER_STATUSES = {
   PAID: 'paid',
   IN_PROGRESS: 'in_progress',
   SUBMITTED: 'delivered',
-  REVISION: 'cancelled',
+  REVISION: 'revision',
   DELIVERED: 'delivered',
   COMPLETED: 'completed',
   CANCELLED: 'cancelled'
@@ -81,6 +81,10 @@ export default function OrderDetailPage() {
   const [submissionMessage, setSubmissionMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [existingReview, setExistingReview] = useState<Review | null>(null)
+  const [revisionNote, setRevisionNote] = useState('')
+  const [showRevisionDialog, setShowRevisionDialog] = useState(false)
+  const [disputeReason, setDisputeReason] = useState('')
+  const [showDisputeDialog, setShowDisputeDialog] = useState(false)
   // const { theme } = useRole()
   const theme = {
     primary: 'bg-blue-600',
@@ -227,7 +231,17 @@ export default function OrderDetailPage() {
     const hasSubmissions = (!submissionsError && submissions && submissions.length > 0) ||
                           (submissionsError && orderData.submission_count && orderData.submission_count > 0)
 
-    if (currentStatus === 'delivered' && hasSubmissions) {
+    if (currentStatus === 'disputed') {
+      // If disputed, show dispute status
+      baseSteps.push({
+        id: nextId++,
+        type: 'dispute_opened',
+        title: 'Dispute Opened',
+        description: 'A dispute has been opened for this order. An admin will review the case.',
+        timestamp: orderData.updated_at,
+        status: 'current'
+      })
+    } else if (currentStatus === 'delivered' && hasSubmissions) {
       // If submitted, show awaiting review after the latest submission
       baseSteps.push({
         id: nextId++,
@@ -237,7 +251,7 @@ export default function OrderDetailPage() {
         timestamp: orderData.updated_at,
         status: 'current'
       })
-    } else if (currentStatus === 'cancelled') {
+    } else if (currentStatus === 'revision' || currentStatus === 'cancelled') {
       // If revision requested, show revision workflow
       baseSteps.push({
         id: nextId++,
@@ -255,7 +269,7 @@ export default function OrderDetailPage() {
         timestamp: orderData.updated_at,
         status: 'current'
       })
-    } else if (['delivered', 'completed'].includes(currentStatus)) {
+    } else if (currentStatus === 'completed') {
       // If completed, show approval step
       baseSteps.push({
         id: nextId++,
@@ -333,13 +347,21 @@ export default function OrderDetailPage() {
 
         console.log('Basic order query result:', { basicOrder, basicError })
 
-        if (basicError) {
+        const isRealError = !!(basicError && ((basicError as any).code || (basicError as any).message || (basicError as any).details || (basicError as any).hint))
+        if (isRealError) {
           console.error('Basic order fetch error:', basicError)
-          if (basicError.code === 'PGRST116') {
+          const code = (basicError as any).code
+          const msg = (basicError as any).message
+          if (code === 'PGRST116') {
             setError('Order not found')
           } else {
-            setError(`Failed to load order: ${basicError.message || 'Unknown error'}`)
+            setError(`Failed to load order: ${msg || 'Unknown error'}`)
           }
+          return
+        }
+
+        if (!basicOrder) {
+          setError('Order not found')
           return
         }
 
@@ -578,6 +600,113 @@ export default function OrderDetailPage() {
     }
   }
 
+  const handleRevisionRequest = async () => {
+    try {
+      setIsSubmitting(true)
+
+      if (!order || !order.id) {
+        alert('Order not found. Please refresh the page.')
+        return
+      }
+
+      const response = await fetch(`/api/orders/${order.id}/revision`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          revisionNote: revisionNote.trim() || 'Revision requested'
+        })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        console.error('Error requesting revision:', result.error)
+        alert(`Failed to request revision: ${result.error || 'Unknown error'}`)
+        return
+      }
+
+      console.log('Revision requested successfully:', result)
+
+      // Update local state
+      const updatedOrder = { ...order, status: 'revision' }
+      const activities = await createTimeline('revision', {
+        order_created: order.created_at,
+        payment_confirmed: order.created_at,
+        work_started: order.updated_at,
+        work_submitted: order.updated_at,
+        revision_requested: new Date().toISOString(),
+        work_approved: order.updated_at,
+        order_completed: order.updated_at
+      }, { ...updatedOrder, status: 'revision' as OrderStatus })
+
+      setOrder({ ...updatedOrder, status: 'revision' as OrderStatus, activities })
+      setShowRevisionDialog(false)
+      setRevisionNote('')
+      alert('Revision requested successfully!')
+
+    } catch (error) {
+      console.error('Error requesting revision:', error)
+      alert('An unexpected error occurred. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleOpenDispute = async () => {
+    try {
+      setIsSubmitting(true)
+
+      if (!order || !order.id) {
+        alert('Order not found. Please refresh the page.')
+        return
+      }
+
+      if (!disputeReason.trim()) {
+        alert('Please provide a reason for the dispute.')
+        setIsSubmitting(false)
+        return
+      }
+
+      const response = await fetch(`/api/orders/${order.id}/dispute`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          reason: disputeReason.trim()
+        })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        console.error('Error opening dispute:', result.error)
+        alert(`Failed to open dispute: ${result.error || 'Unknown error'}`)
+        return
+      }
+
+      console.log('Dispute opened successfully:', result)
+
+      // Update local state
+      const updatedOrder = { ...order, status: 'disputed' as OrderStatus }
+      setOrder(updatedOrder)
+      setShowDisputeDialog(false)
+      setDisputeReason('')
+      alert('Dispute opened successfully. An admin will review your case shortly.')
+
+      // Reload the page to refresh the order
+      window.location.reload()
+
+    } catch (error) {
+      console.error('Error opening dispute:', error)
+      alert('An unexpected error occurred. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   const updateOrderStatus = async (newStatus: string, customMessage?: string) => {
     try {
       setIsSubmitting(true)
@@ -601,64 +730,58 @@ export default function OrderDetailPage() {
         userId: user.id
       })
 
-      let submissionCount = 1
-
+      // For delivered status, use the API endpoint to send email notifications
       if (newStatus === 'delivered') {
-        submissionCount = await getSubmissionCount()
-      }
+        const submissionCount = await getSubmissionCount()
 
-      // Update order status
-      const { error, data } = await supabase
-        .from('orders')
-        .update({ status: newStatus })
-        .eq('id', order.id)
-        .select()
+        const response = await fetch(`/api/orders/${order.id}/deliver`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            message: customMessage || 'Work submitted for review',
+            submissionNumber: submissionCount
+          })
+        })
 
-      if (error) {
-        console.error('Error updating order status:', error)
-        console.error('Error details:', JSON.stringify(error, null, 2))
-        alert(`Failed to update order status: ${error.message || 'Unknown error'}`)
-        return
-      }
+        const result = await response.json()
 
-      console.log('Order updated successfully:', data)
-
-      // DON'T create any automatic chat messages - chat is only for manual conversation
-      // All status updates should only appear in timeline, not in chat
-
-      // For submissions, try to store in order_submissions table, fallback to order table
-      if (newStatus === 'delivered') {
-        try {
-          const submissionMessage = customMessage || 'Work submitted for review'
-
-          // Try to store in order_submissions table first
-          const { error: submissionError } = await supabase
-            .from('order_submissions')
-            .insert({
-              order_id: order.id,
-              submission_number: submissionCount,
-              message: submissionMessage,
-              submitted_by: user.id
-            })
-
-          if (submissionError) {
-            console.warn('order_submissions table not available, using fallback storage:', submissionError)
-
-            // Fallback: Store in order table for now
-            await supabase
-              .from('orders')
-              .update({
-                last_submission_message: submissionMessage,
-                last_submission_at: new Date().toISOString(),
-                submission_count: submissionCount
-              })
-              .eq('id', order.id)
-          } else {
-            console.log('✅ Submission stored successfully:', submissionCount)
-          }
-        } catch (error) {
-          console.warn('Could not store submission details:', error)
+        if (!response.ok) {
+          console.error('Error delivering order:', result.error)
+          alert(`Failed to deliver order: ${result.error || 'Unknown error'}`)
+          return
         }
+
+        console.log('Order delivered successfully:', result)
+      } else if (newStatus === 'completed') {
+        // Use API endpoint for completion to trigger notifications and email
+        const response = await fetch(`/api/orders/${order.id}/complete`, {
+          method: 'POST'
+        })
+        const result = await response.json()
+        if (!response.ok) {
+          console.error('Error completing order:', result.error)
+          alert(`Failed to complete order: ${result.error || 'Unknown error'}`)
+          return
+        }
+        console.log('Order completed successfully:', result)
+      } else {
+        // For other status updates, update directly
+        const { error, data } = await supabase
+          .from('orders')
+          .update({ status: newStatus })
+          .eq('id', order.id)
+          .select()
+
+        if (error) {
+          console.error('Error updating order status:', error)
+          console.error('Error details:', JSON.stringify(error, null, 2))
+          alert(`Failed to update order status: ${error.message || 'Unknown error'}`)
+          return
+        }
+
+        console.log('Order updated successfully:', data)
       }
 
       // Update local state and refresh timeline
@@ -827,7 +950,7 @@ export default function OrderDetailPage() {
                     </button>
                   )}
                   
-                  {(order.status === 'in_progress' || order.status === 'delivered') && (
+                  {(order.status === 'in_progress' || order.status === 'delivered' || order.status === 'revision') && (
                     <div className="space-y-4">
                       {/* Submit Work Section */}
                       <div>
@@ -907,25 +1030,107 @@ export default function OrderDetailPage() {
               {/* Sponsor Actions */}
               {order.sponsor_id === user?.id && order.status === 'delivered' && (
                 <>
-                  <button 
+                  <button
                     onClick={() => updateOrderStatus('completed')}
                     className={`w-full ${theme.primary} ${theme.primaryHover} text-white py-2 px-4 rounded-lg font-medium`}
                   >
                     Approve Work
                   </button>
-                  <button 
-                    onClick={() => updateOrderStatus('cancelled')}
-                    className="w-full bg-yellow-600 hover:bg-yellow-700 text-white py-2 px-4 rounded-lg font-medium"
-                  >
-                    Request Revision
-                  </button>
+                  {!showRevisionDialog ? (
+                    <button
+                      onClick={() => setShowRevisionDialog(true)}
+                      className="w-full bg-yellow-600 hover:bg-yellow-700 text-white py-2 px-4 rounded-lg font-medium"
+                    >
+                      Request Revision
+                    </button>
+                  ) : (
+                    <div className="space-y-3 border border-yellow-300 rounded-lg p-3 bg-yellow-50">
+                      <div>
+                        <label className="text-sm font-medium text-gray-700 block mb-1">
+                          Revision Notes
+                        </label>
+                        <textarea
+                          value={revisionNote}
+                          onChange={(e) => setRevisionNote(e.target.value)}
+                          placeholder="Describe what changes are needed..."
+                          rows={3}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-sm"
+                        />
+                      </div>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={handleRevisionRequest}
+                          disabled={isSubmitting}
+                          className={`flex-1 ${isSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-yellow-600 hover:bg-yellow-700'} text-white py-2 px-3 rounded-lg font-medium text-sm`}
+                        >
+                          {isSubmitting ? 'Sending...' : 'Send Request'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowRevisionDialog(false)
+                            setRevisionNote('')
+                          }}
+                          disabled={isSubmitting}
+                          className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-3 rounded-lg font-medium text-sm"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
-              
-              
-              <button className="w-full bg-red-100 hover:bg-red-200 text-red-700 py-2 px-4 rounded-lg font-medium">
-                Open Dispute
-              </button>
+
+              {/* Dispute Button - Available for both sponsor and KOL */}
+              {(order.sponsor_id === user?.id || order.kol_id === user?.id) && order.status !== 'disputed' && order.status !== 'completed' && order.status !== 'cancelled' && (
+                <>
+                  {!showDisputeDialog ? (
+                    <button
+                      onClick={() => setShowDisputeDialog(true)}
+                      className="w-full bg-red-100 hover:bg-red-200 text-red-700 py-2 px-4 rounded-lg font-medium"
+                    >
+                      Open Dispute
+                    </button>
+                  ) : (
+                    <div className="space-y-3 border border-red-300 rounded-lg p-3 bg-red-50">
+                      <div>
+                        <label className="text-sm font-medium text-gray-700 block mb-1">
+                          Dispute Reason
+                        </label>
+                        <textarea
+                          value={disputeReason}
+                          onChange={(e) => setDisputeReason(e.target.value)}
+                          placeholder="Explain the issue with this order..."
+                          rows={4}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm"
+                        />
+                        <p className="text-xs text-gray-600 mt-1">
+                          An admin will review your case. Be as detailed as possible.
+                        </p>
+                      </div>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={handleOpenDispute}
+                          disabled={isSubmitting || !disputeReason.trim()}
+                          className={`flex-1 ${isSubmitting || !disputeReason.trim() ? 'bg-gray-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'} text-white py-2 px-3 rounded-lg font-medium text-sm`}
+                        >
+                          {isSubmitting ? 'Opening...' : 'Open Dispute'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowDisputeDialog(false)
+                            setDisputeReason('')
+                          }}
+                          disabled={isSubmitting}
+                          className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-3 rounded-lg font-medium text-sm"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
 

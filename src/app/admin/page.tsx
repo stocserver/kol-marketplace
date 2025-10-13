@@ -13,6 +13,8 @@ interface AdminStats {
   totalOrders: number
   pendingPayouts: number
   totalPayouts: number
+  openDisputes: number
+  totalDisputes: number
 }
 
 export default function AdminDashboard() {
@@ -30,20 +32,24 @@ export default function AdminDashboard() {
   const fetchStats = useCallback(async () => {
     try {
       setLoading(true)
-      
+
       // Fetch stats in parallel
-      const [gigsResult, usersResult, ordersResult, payoutsResult] = await Promise.all([
+      const [gigsResult, usersResult, ordersResult, payoutsResult, disputesResult] = await Promise.all([
         supabase.from('gigs').select('approval_status'),
         supabase.from('profiles').select('id'),
         supabase.from('orders').select('id'),
-        supabase.from('payout_requests').select('status')
+        supabase.from('payout_requests').select('status'),
+        supabase.from('disputes').select('status')
       ])
 
       const gigs = gigsResult.data || []
       const pendingGigs = gigs.filter(g => g.approval_status === 'pending').length
-      
+
       const payouts = payoutsResult.data || []
       const pendingPayouts = payouts.filter(p => p.status === 'pending').length
+
+      const disputes = disputesResult.data || []
+      const openDisputes = disputes.filter(d => d.status === 'open' || d.status === 'under_review').length
 
       setStats({
         totalGigs: gigs.length,
@@ -51,8 +57,10 @@ export default function AdminDashboard() {
         totalUsers: usersResult.data?.length || 0,
         totalOrders: ordersResult.data?.length || 0,
         pendingPayouts,
-        totalPayouts: payouts.length
-      })
+        totalPayouts: payouts.length,
+        openDisputes,
+        totalDisputes: disputes.length
+      } as AdminStats)
     } catch (error) {
       console.error('Error fetching stats:', error)
     } finally {
@@ -175,19 +183,25 @@ export default function AdminDashboard() {
               </div>
             </Link>
 
-            <div className="p-6 border border-gray-200 rounded-lg opacity-50 cursor-not-allowed">
+            <Link
+              href="/admin/disputes"
+              className="p-6 border border-gray-200 rounded-lg hover:border-red-500 hover:shadow-md transition-all group"
+            >
               <div className="flex items-center space-x-3">
-                <div className="p-2 bg-gray-100 rounded-lg">
-                  <svg className="w-6 h-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                <div className="p-2 bg-red-100 rounded-lg group-hover:bg-red-200 transition-colors">
+                  <svg className="w-6 h-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
                 </div>
                 <div>
-                  <h3 className="font-medium text-gray-500">Manage Users</h3>
-                  <p className="text-sm text-gray-500">Coming soon</p>
+                  <h3 className="font-medium text-gray-900">Manage Disputes</h3>
+                  <p className="text-sm text-gray-600">Resolve order conflicts</p>
+                  {(stats?.openDisputes ?? 0) > 0 && (
+                    <p className="text-xs text-red-600 mt-1">{stats?.openDisputes} open</p>
+                  )}
                 </div>
               </div>
-            </div>
+            </Link>
 
             <div className="p-6 border border-gray-200 rounded-lg opacity-50 cursor-not-allowed">
               <div className="flex items-center space-x-3">

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 interface OrderChatProps {
@@ -22,8 +22,19 @@ export default function OrderChat({ orderId }: OrderChatProps) {
   const [currentUser, setCurrentUser] = useState<{ id: string; email?: string; display_name?: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null)
+  const messagesEndRef = useRef<HTMLDivElement | null>(null)
+
+  const scrollToBottom = (behavior: ScrollBehavior = 'auto') => {
+    const container = scrollContainerRef.current
+    if (container) {
+      container.scrollTop = container.scrollHeight
+    }
+    messagesEndRef.current?.scrollIntoView({ behavior })
+  }
 
   useEffect(() => {
+    let channel: any
     const loadMessages = async () => {
       try {
         // Get current user
@@ -66,7 +77,7 @@ export default function OrderChat({ orderId }: OrderChatProps) {
         setLoading(false)
 
         // Subscribe to new messages
-        const channel = supabase
+        channel = supabase
           .channel(`order_messages_${orderId}`)
           .on(
             'postgres_changes',
@@ -95,9 +106,7 @@ export default function OrderChat({ orderId }: OrderChatProps) {
           )
           .subscribe()
 
-        return () => {
-          supabase.removeChannel(channel)
-        }
+        // cleanup happens in the effect's cleanup below
       } catch (error) {
         console.error('Error loading messages:', error)
         setLoading(false)
@@ -105,7 +114,26 @@ export default function OrderChat({ orderId }: OrderChatProps) {
     }
 
     loadMessages()
+    return () => {
+      if (channel) {
+        supabase.removeChannel(channel)
+      }
+    }
   }, [orderId, supabase])
+
+  // Scroll to bottom when initial load completes
+  useEffect(() => {
+    if (!loading) {
+      scrollToBottom('auto')
+    }
+  }, [loading])
+
+  // Scroll to bottom whenever a new message arrives
+  useEffect(() => {
+    if (!loading && messages.length > 0) {
+      scrollToBottom('smooth')
+    }
+  }, [messages.length, loading])
 
   const handleSendMessage = async () => {
     if (!message.trim() || !currentUser) return
@@ -148,7 +176,7 @@ export default function OrderChat({ orderId }: OrderChatProps) {
       </div>
 
       {/* Messages */}
-      <div className="h-64 overflow-y-auto p-4 space-y-3">
+      <div ref={scrollContainerRef} className="h-64 overflow-y-auto p-4 space-y-3">
         {loading ? (
           <div className="flex justify-center items-center h-full">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -169,7 +197,7 @@ export default function OrderChat({ orderId }: OrderChatProps) {
                   <div className={`text-xs text-gray-600 mb-1 ${
                     isCurrentUser ? 'text-right' : 'text-left'
                   }`}>
-                    {isCurrentUser ? 'You' : msg.sender_name}
+                    {msg.sender_name}
                   </div>
                   
                   <div
@@ -192,6 +220,7 @@ export default function OrderChat({ orderId }: OrderChatProps) {
             )
           })
         )}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Message Input */}

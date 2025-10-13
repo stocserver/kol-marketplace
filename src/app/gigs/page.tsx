@@ -23,6 +23,7 @@ interface Gig {
   fast_delivery: boolean
   fast_delivery_days?: number
   preview_image_url?: string
+  image_urls?: string[]
   is_active: boolean
   approval_status?: 'pending' | 'approved' | 'rejected'
   admin_notes?: string
@@ -73,6 +74,24 @@ export default function GigsPage() {
 
     fetchGigs()
   }, [user, supabase])
+
+  const getApprovalBadge = (status?: 'pending' | 'approved' | 'rejected') => {
+    switch (status) {
+      case 'approved':
+        return { label: 'Approved', className: 'bg-green-50 text-green-700 border border-green-200' }
+      case 'rejected':
+        return { label: 'Rejected', className: 'bg-red-50 text-red-700 border border-red-200' }
+      default:
+        return { label: 'Pending Review', className: 'bg-yellow-50 text-yellow-700 border border-yellow-200' }
+    }
+  }
+
+  const getActiveBadge = (isActive?: boolean) => {
+    if (isActive === false) {
+      return { label: 'Paused', className: 'bg-gray-100 text-gray-600 border border-gray-200' }
+    }
+    return { label: 'Active', className: 'bg-blue-50 text-blue-700 border border-blue-200' }
+  }
 
   const toggleGigStatus = async (gigId: string, currentStatus: boolean) => {
     try {
@@ -269,152 +288,139 @@ export default function GigsPage() {
 
         {/* Gigs List */}
         {filteredGigs.length > 0 ? (
-          <div className="space-y-6">
-            {filteredGigs.map((gig) => (
-              <div key={gig.id} className="bg-white rounded-lg shadow-sm overflow-hidden">
-                <div className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-4 mb-4">
-                        {gig.preview_image_url && (
-                          <div className="w-20 h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
-                            <Image
-                              src={gig.preview_image_url}
-                              alt={gig.title}
-                              width={80}
-                              height={80}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        )}
-                        <div className="flex-1">
-                          <h3 className="text-xl font-semibold text-gray-900 mb-2">{gig.title}</h3>
-                          <p className="text-gray-600 mb-3 line-clamp-2">{gig.description}</p>
-                          <div className="flex items-center space-x-4 text-sm text-gray-500">
-                            <span>${gig.price}</span>
-                            <span>•</span>
-                            <span>{gig.delivery_days} days delivery</span>
-                            <span>•</span>
-                            <span className="capitalize">{gig.platform}</span>
-                            {(gig.orders_count || 0) > 0 && (
-                              <>
-                                <span>•</span>
-                                <span>{gig.orders_count} orders</span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        <span className="px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded-md">
-                          {gig.platform}
-                        </span>
-                        <span className="px-2 py-1 bg-green-100 text-green-600 text-xs rounded-md">
-                          {GENRE_CATEGORIES.find(cat => cat.value === gig.genre_category)?.label || gig.genre_category}
-                        </span>
-                        <span className="px-2 py-1 bg-purple-100 text-purple-600 text-xs rounded-md">
-                          {gig.content_type}
-                        </span>
-                        {gig.fast_delivery && (
-                          <span className="px-2 py-1 bg-orange-100 text-orange-600 text-xs rounded-md">
-                            Fast delivery
-                          </span>
-                        )}
-                      </div>
-                    </div>
+          <div className="space-y-4">
+            {filteredGigs.map((gig) => {
+              const approvalBadge = getApprovalBadge(gig.approval_status)
+              const activeBadge = getActiveBadge(gig.is_active)
 
-                    <div className="flex flex-col items-end space-y-3 ml-6">
-                      <div className="flex flex-col space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <span
-                            className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
-                              gig.is_active
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-gray-100 text-gray-800'
-                            }`}
-                          >
-                            {gig.is_active ? 'Active' : 'Paused'}
-                          </span>
-                          {(gig.rating || 0) > 0 && (
-                            <div className="flex items-center space-x-1 text-yellow-600">
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                              </svg>
-                              <span className="text-sm font-medium">{gig.rating}</span>
+              return (
+              <div key={gig.id} className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                <div className="p-5">
+                  <div className="flex gap-6">
+                    {(() => {
+                      const thumbnail = gig.image_urls?.[0] ?? gig.preview_image_url
+                      if (!thumbnail) {
+                        return (
+                          <div className="w-24 h-24 sm:w-28 sm:h-28 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                        )
+                      }
+
+                      const additionalCount = Math.max((gig.image_urls?.length || 0) - 1, 0)
+
+                      return (
+                        <div className="w-24 h-24 sm:w-28 sm:h-28 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 relative">
+                          <Image
+                            src={thumbnail}
+                            alt={`${gig.title} preview`}
+                            fill
+                            sizes="(max-width: 640px) 96px, 112px"
+                            className="object-cover"
+                          />
+                          {additionalCount > 0 && (
+                            <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[10px] font-medium px-2 py-0.5 rounded-full">
+                              +{additionalCount}
                             </div>
                           )}
                         </div>
-                        
-                        {/* Approval Status */}
-                        <div className="flex items-center">
-                          <span
-                            className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                              gig.approval_status === 'approved'
-                                ? 'bg-green-100 text-green-800'
-                                : gig.approval_status === 'rejected'
-                                ? 'bg-red-100 text-red-800'
-                                : 'bg-yellow-100 text-yellow-800'
-                            }`}
-                          >
-                            {gig.approval_status === 'approved' ? '✓ Approved' :
-                             gig.approval_status === 'rejected' ? '✗ Rejected' :
-                             '⏳ Pending Review'}
-                          </span>
-                        </div>
-                        
-                        {gig.approval_status === 'rejected' && gig.admin_notes && (
-                          <div className="text-xs text-red-600 bg-red-50 p-2 rounded border-l-2 border-red-200">
-                            <strong>Admin Notes:</strong> {gig.admin_notes}
-                          </div>
+                      )
+                    })()}
+                    {/* Left - Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-3">
+                        <span className={`px-2.5 py-0.5 rounded-md text-xs font-medium ${approvalBadge.className}`}>{approvalBadge.label}</span>
+                        <span className={`px-2.5 py-0.5 rounded-md text-xs font-medium ${activeBadge.className}`}>{activeBadge.label}</span>
+                      </div>
+                      <div className="mb-3">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-1">{gig.title}</h3>
+                        <p className="text-sm text-gray-600 line-clamp-2">{gig.description}</p>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        <span className="px-2.5 py-0.5 bg-blue-50 text-blue-700 text-xs font-medium rounded-md border border-blue-200">
+                          {gig.platform}
+                        </span>
+                        <span className="px-2.5 py-0.5 bg-purple-50 text-purple-700 text-xs font-medium rounded-md border border-purple-200">
+                          {GENRE_CATEGORIES.find(cat => cat.value === gig.genre_category)?.label || gig.genre_category}
+                        </span>
+                        <span className="px-2.5 py-0.5 bg-gray-50 text-gray-700 text-xs font-medium rounded-md border border-gray-200">
+                          {gig.content_type}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-3 text-sm">
+                        <span className="font-semibold text-green-600">${gig.price}</span>
+                        <span className="text-gray-400">•</span>
+                        <span className="text-gray-600">{gig.delivery_days} days</span>
+                        {gig.orders_count && gig.orders_count > 0 && (
+                          <>
+                            <span className="text-gray-400">•</span>
+                            <span className="text-gray-600">{gig.orders_count} orders</span>
+                          </>
+                        )}
+                        {gig.rating && gig.rating > 0 && (
+                          <>
+                            <span className="text-gray-400">•</span>
+                            <div className="flex items-center gap-1">
+                              <svg className="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                              </svg>
+                              <span className="font-medium text-gray-900">{gig.rating}</span>
+                            </div>
+                          </>
                         )}
                       </div>
 
-                      <div className="flex flex-col space-y-2">
-                        <div className="flex space-x-2">
-                          <Link
-                            href={`/gigs/${gig.id}/edit`}
-                            className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
-                          >
-                            Edit
-                          </Link>
-                          <button
-                            onClick={() => toggleGigStatus(gig.id, gig.is_active)}
-                            disabled={gig.approval_status !== 'approved'}
-                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                              gig.approval_status !== 'approved'
-                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                : gig.is_active
-                                ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                : 'bg-green-100 text-green-700 hover:bg-green-200'
-                            }`}
-                            title={gig.approval_status !== 'approved' ? 'Gig must be approved to activate' : ''}
-                          >
-                            {gig.is_active ? 'Pause' : 'Activate'}
-                          </button>
-                          <Link
-                            href={`/gigs/${gig.id}`}
-                            className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                          >
+                      {gig.approval_status === 'rejected' && gig.admin_notes && (
+                        <div className="mt-3 text-xs text-red-700 bg-red-50 p-2.5 rounded-md border border-red-200">
+                          <strong>Feedback:</strong> {gig.admin_notes}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Right - Status & Actions */}
+                    <div className="flex flex-col justify-between items-end min-w-[160px]">
+                      <div className="flex flex-col gap-2 w-full items-end">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${activeBadge.className}`}>{activeBadge.label}</span>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${approvalBadge.className}`}>{approvalBadge.label}</span>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Link href={`/gigs/${gig.id}`} className="px-3 py-1.5 bg-blue-600 text-white text-center text-xs font-medium rounded-md hover:bg-blue-700 transition-colors">
                             View
                           </Link>
+                          <Link href={`/gigs/${gig.id}/edit`} className="px-3 py-1.5 border border-gray-300 text-gray-700 text-center text-xs font-medium rounded-md hover:bg-gray-50 transition-colors">
+                            Edit
+                          </Link>
                         </div>
-                        
+                        <button
+                          onClick={() => toggleGigStatus(gig.id, gig.is_active)}
+                          disabled={gig.approval_status !== 'approved'}
+                          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                            gig.approval_status !== 'approved' ? 'bg-gray-100 text-gray-400 cursor-not-allowed' :
+                            gig.is_active ? 'bg-yellow-50 text-yellow-700 border border-yellow-200 hover:bg-yellow-100' :
+                            'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100'
+                          }`}
+                        >
+                          {gig.is_active ? '⏸ Pause' : '▶ Activate'}
+                        </button>
                         <button
                           onClick={() => openDeleteModal(gig)}
-                          className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium flex items-center justify-center space-x-1"
+                          className="px-3 py-1.5 bg-red-50 text-red-600 border border-red-200 text-xs font-medium rounded-md hover:bg-red-100 transition-colors flex items-center justify-center gap-1"
                         >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1H8a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
-                          <span>Delete</span>
+                          Delete
                         </button>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-            ))}
+              )
+            })}
           </div>
         ) : (
           <div className="bg-white rounded-lg shadow-sm p-12 text-center">

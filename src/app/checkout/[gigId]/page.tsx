@@ -150,25 +150,25 @@ export default function CheckoutPage() {
 
   const handlePaymentSuccess = async (paymentIntentId: string) => {
     try {
-      // Update order status to paid
-      const { error: updateError } = await supabase
-        .from('orders')
-        .update({
-          status: 'paid',
-          stripe_payment_intent_id: paymentIntentId
-        })
-        .eq('id', orderId)
+      // Call server to mark order as paid and trigger notifications
+      const resp = await fetch(`/api/orders/${orderId}/paid`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentIntentId })
+      })
 
-      if (updateError) {
-        console.error('Error updating order status:', updateError)
-        setPaymentError('Payment succeeded but order update failed. Please contact support.')
+      const result = await resp.json().catch(() => ({}))
+
+      if (!resp.ok || !result?.success) {
+        console.error('Order paid route error:', result)
+        setPaymentError('Payment succeeded but order finalization failed. Please contact support.')
         return
       }
 
       // Redirect to order page
       router.push(`/orders/${orderId}?success=true`)
     } catch (error) {
-      console.error('Error updating order:', error)
+      console.error('Error finalizing order:', error)
       setPaymentError('Payment succeeded but order update failed. Please contact support.')
     }
   }
@@ -201,6 +201,7 @@ export default function CheckoutPage() {
               processing={processing}
               setProcessing={setProcessing}
               onBack={() => setStep(1)}
+              returnUrl={`${typeof window !== 'undefined' ? window.location.origin : ''}/orders/${orderId}?success=true`}
             />
           </StripeProvider>
         ) : (

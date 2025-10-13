@@ -1,21 +1,24 @@
--- Fix the payout_requests table foreign key and policies
+-- Payout requests fixes (merged)
+-- Consolidates table FK fix and clean RLS policies for payout_requests
 
--- First, drop existing policies
-DROP POLICY IF EXISTS "KOLs can view own payout requests" ON payout_requests;
-DROP POLICY IF EXISTS "KOLs can create payout requests" ON payout_requests;  
-DROP POLICY IF EXISTS "Admins can view all payout requests" ON payout_requests;
-
--- Drop the existing foreign key constraint
+-- Foreign key correction (if needed)
 ALTER TABLE payout_requests DROP CONSTRAINT IF EXISTS payout_requests_kol_id_fkey;
-
--- Add the correct foreign key constraint to reference profiles(id)
 ALTER TABLE payout_requests ADD CONSTRAINT payout_requests_kol_id_fkey 
   FOREIGN KEY (kol_id) REFERENCES profiles(id) ON DELETE CASCADE;
 
--- Recreate the RLS policies with the correct logic
+-- Enable RLS (idempotent)
+ALTER TABLE payout_requests ENABLE ROW LEVEL SECURITY;
+
+-- Reset policies
+DROP POLICY IF EXISTS "KOLs can view own payout requests" ON payout_requests;
+DROP POLICY IF EXISTS "KOLs can create payout requests" ON payout_requests;
+DROP POLICY IF EXISTS "Admins can view all payout requests" ON payout_requests;
+
+-- View own
 CREATE POLICY "KOLs can view own payout requests" ON payout_requests
   FOR SELECT USING (kol_id = auth.uid());
 
+-- Create only for completed own orders
 CREATE POLICY "KOLs can create payout requests" ON payout_requests
   FOR INSERT WITH CHECK (
     kol_id = auth.uid() AND
@@ -26,6 +29,7 @@ CREATE POLICY "KOLs can create payout requests" ON payout_requests
     )
   );
 
+-- Admins full access
 CREATE POLICY "Admins can view all payout requests" ON payout_requests
   FOR ALL USING (
     EXISTS (

@@ -20,4 +20,5 @@ SELECT column_name
 FROM information_schema.columns 
 WHERE table_name = 'gigs' 
 AND table_schema = 'public'
-AND column_name IN ('platform', 'content_type', 'genre_category');
+AND column_name IN ('platform', 'content_type', 'genre_category');-- Additional diagnostics
+SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='''public''' AND table_name='''favorites''') as favorites_exists;

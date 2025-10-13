@@ -127,6 +127,124 @@ export default function ConversationBox({
     }
   }, [startNewChat, conversations, setStartNewChat, loadRecipientInfo])
 
+  const loadMessagesOnly = useCallback(async (conversationId: string, offset = 0, append = false) => {
+    try {
+      const response = await fetch(`/api/messages/${conversationId}?limit=20&offset=${offset}`)
+      const data = await response.json()
+      if (response.ok) {
+        if (append) {
+          // Prepend older messages to the beginning
+          setMessages(prev => [...data.messages, ...prev])
+        } else {
+          // Replace messages (initial load)
+          setMessages(data.messages)
+          // Only auto-scroll when first loading a conversation - with a delay
+          setTimeout(() => {
+            setShouldAutoScroll(true)
+          }, 100)
+        }
+        setHasMoreMessages(data.hasMore)
+      }
+    } catch (error) {
+      console.error('Failed to load messages:', error)
+    }
+  }, [])
+
+  const loadMessages = useCallback(async (conversationId: string) => {
+    loadMessagesOnly(conversationId)
+  }, [loadMessagesOnly])
+
+  // Check for new messages via polling
+  const checkForNewMessages = useCallback(async () => {
+    try {
+      console.log('Checking for new messages...')
+      console.log('Current user:', currentUser?.id)
+      console.log('Selected conversation:', selectedConversation)
+
+      // Reload conversations to get latest messages and detect unread ones
+      const response = await fetch('/api/messages/conversations')
+      const data = await response.json()
+
+      if (response.ok) {
+        const newConversations = data.conversations
+        setConversations(newConversations)
+
+        // Check for unread messages by comparing with last seen message timestamps
+        const currentUnread = new Set<string>()
+
+        newConversations.forEach((conv: Conversation) => {
+          if (conv.last_message &&
+              conv.last_message.sender_id !== currentUser?.id &&
+              conv.id !== selectedConversation) {
+            // Add to unread if this conversation has a message from someone else
+            currentUnread.add(conv.id)
+          }
+        })
+
+        // Show notification if we have new unread messages
+        const previousUnreadCount = unreadConversations.size
+        const newUnreadCount = currentUnread.size
+
+        if (newUnreadCount > previousUnreadCount) {
+          console.log('New unread messages detected!')
+
+          // Show browser notification
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('New Message', {
+              body: `You have ${newUnreadCount} unread conversation${newUnreadCount > 1 ? 's' : ''}`,
+              icon: '/favicon.ico',
+              tag: 'new-message'
+            })
+          }
+        }
+
+        setUnreadConversations(currentUnread)
+
+        // If we're in an active conversation, check if the conversation's last message changed
+        if (selectedConversation) {
+          console.log('Checking if selected conversation has new messages...')
+
+          const selectedConv = newConversations.find((conv: { id: string; last_message?: { id: string; content: string } }) => conv.id === selectedConversation)
+          if (selectedConv?.last_message) {
+            console.log('Selected conversation last message:', selectedConv.last_message.id, selectedConv.last_message.content)
+
+            // Check if we need to reload messages based on the conversation's last message
+            setMessages(prevMessages => {
+              const currentLastMessage = prevMessages[prevMessages.length - 1]
+
+              if (!currentLastMessage) {
+                console.log('No messages in state, will reload')
+                // If no messages in state, trigger a reload
+                loadMessagesOnly(selectedConversation, 0, false)
+                return prevMessages
+              }
+
+              // If the conversation's last message is different from our last message, reload
+              if (selectedConv.last_message.id !== currentLastMessage.id) {
+                console.log('New message detected! Conversation last:', selectedConv.last_message.id, 'vs our last:', currentLastMessage.id)
+
+                // Check if it's from someone else for auto-scroll
+                if (selectedConv.last_message.sender_id !== currentUser?.id) {
+                  console.log('Message is from someone else, will auto-scroll')
+                  setShouldAutoScroll(true)
+                }
+
+                // Reload messages to get the new ones
+                loadMessagesOnly(selectedConversation, 0, false)
+              } else {
+                console.log('No new messages in selected conversation')
+              }
+
+              return prevMessages
+            })
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to check for new messages:', error)
+    }
+  }, [currentUser?.id, selectedConversation, setUnreadConversations, unreadConversations.size, loadMessagesOnly])
+
   // Set up polling for new messages every 10 seconds
   useEffect(() => {
     if (currentUser) {
@@ -141,17 +259,21 @@ export default function ConversationBox({
         clearInterval(interval)
       }
     }
-  }, [currentUser, selectedConversation])
+  }, [currentUser, selectedConversation, checkForNewMessages])
 
+  // Load messages when a conversation is selected and clear its unread flag.
+  // Guard "new-chat" (no API route), and avoid dependency loops.
   useEffect(() => {
-    if (selectedConversation) {
-      loadMessages(selectedConversation)
-      // Mark this conversation as read
-      const newSet = new Set(unreadConversations)
-      newSet.delete(selectedConversation)
-      setUnreadConversations(newSet)
+    if (!selectedConversation || selectedConversation === 'new-chat') return
+
+    loadMessages(selectedConversation)
+
+    if (unreadConversations.has(selectedConversation)) {
+      const next = new Set(unreadConversations)
+      next.delete(selectedConversation)
+      setUnreadConversations(next)
     }
-  }, [selectedConversation, setUnreadConversations, unreadConversations])
+  }, [selectedConversation, loadMessages, setUnreadConversations, unreadConversations])
 
   // Only auto-scroll when we specifically want to (new message sent/received)
   useEffect(() => {
@@ -180,124 +302,6 @@ export default function ConversationBox({
       })
     }
   }
-
-  // Check for new messages via polling
-  const checkForNewMessages = useCallback(async () => {
-    try {
-      console.log('Checking for new messages...')
-      console.log('Current user:', currentUser?.id)
-      console.log('Selected conversation:', selectedConversation)
-      
-      // Reload conversations to get latest messages and detect unread ones
-      const response = await fetch('/api/messages/conversations')
-      const data = await response.json()
-      
-      if (response.ok) {
-        const newConversations = data.conversations
-        setConversations(newConversations)
-        
-        // Check for unread messages by comparing with last seen message timestamps
-        const currentUnread = new Set<string>()
-        
-        newConversations.forEach((conv: Conversation) => {
-          if (conv.last_message && 
-              conv.last_message.sender_id !== currentUser?.id && 
-              conv.id !== selectedConversation) {
-            // Add to unread if this conversation has a message from someone else
-            currentUnread.add(conv.id)
-          }
-        })
-        
-        // Show notification if we have new unread messages
-        const previousUnreadCount = unreadConversations.size
-        const newUnreadCount = currentUnread.size
-        
-        if (newUnreadCount > previousUnreadCount) {
-          console.log('New unread messages detected!')
-          
-          // Show browser notification
-          if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification('New Message', {
-              body: `You have ${newUnreadCount} unread conversation${newUnreadCount > 1 ? 's' : ''}`,
-              icon: '/favicon.ico',
-              tag: 'new-message'
-            })
-          }
-        }
-        
-        setUnreadConversations(currentUnread)
-        
-        // If we're in an active conversation, check if the conversation's last message changed
-        if (selectedConversation) {
-          console.log('Checking if selected conversation has new messages...')
-          
-          const selectedConv = newConversations.find((conv: { id: string; last_message?: { id: string; content: string } }) => conv.id === selectedConversation)
-          if (selectedConv?.last_message) {
-            console.log('Selected conversation last message:', selectedConv.last_message.id, selectedConv.last_message.content)
-            
-            // Check if we need to reload messages based on the conversation's last message
-            setMessages(prevMessages => {
-              const currentLastMessage = prevMessages[prevMessages.length - 1]
-              
-              if (!currentLastMessage) {
-                console.log('No messages in state, will reload')
-                // If no messages in state, trigger a reload
-                loadMessagesOnly(selectedConversation, 0, false)
-                return prevMessages
-              }
-              
-              // If the conversation's last message is different from our last message, reload
-              if (selectedConv.last_message.id !== currentLastMessage.id) {
-                console.log('New message detected! Conversation last:', selectedConv.last_message.id, 'vs our last:', currentLastMessage.id)
-                
-                // Check if it's from someone else for auto-scroll
-                if (selectedConv.last_message.sender_id !== currentUser?.id) {
-                  console.log('Message is from someone else, will auto-scroll')
-                  setShouldAutoScroll(true)
-                }
-                
-                // Reload messages to get the new ones
-                loadMessagesOnly(selectedConversation, 0, false)
-              } else {
-                console.log('No new messages in selected conversation')
-              }
-              
-              return prevMessages
-            })
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Failed to check for new messages:', error)
-    }
-  }, [currentUser?.id, selectedConversation, setUnreadConversations, unreadConversations.size])
-
-  const loadMessages = useCallback(async (conversationId: string) => {
-    loadMessagesOnly(conversationId)
-  }, [])
-
-  const loadMessagesOnly = useCallback(async (conversationId: string, offset = 0, append = false) => {
-    try {
-      const response = await fetch(`/api/messages/${conversationId}?limit=20&offset=${offset}`)
-      const data = await response.json()
-      if (response.ok) {
-        if (append) {
-          // Prepend older messages to the beginning
-          setMessages(prev => [...data.messages, ...prev])
-        } else {
-          // Replace messages (initial load)
-          setMessages(data.messages)
-          // Only auto-scroll when first loading a conversation - with a delay
-          setTimeout(() => {
-            setShouldAutoScroll(true)
-          }, 100)
-        }
-        setHasMoreMessages(data.hasMore)
-      }
-    } catch (error) {
-      console.error('Failed to load messages:', error)
-    }
-  }, [setMessages, setHasMoreMessages])
 
   const loadOlderMessages = async () => {
     if (!selectedConversation || loadingOlderMessages || !hasMoreMessages) return

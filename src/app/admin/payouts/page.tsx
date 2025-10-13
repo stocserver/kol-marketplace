@@ -282,7 +282,7 @@ export default function AdminPayoutsPage() {
                       {/* KOL Info */}
                       <div className="flex items-center space-x-3 mb-4">
                         <Image
-                          src={request.profiles?.avatar_url || '/api/placeholder/48/48'}
+                          src={request.profiles?.avatar_url || '/images/placeholder-avatar.svg'}
                           alt={request.profiles?.full_name || 'KOL'}
                           width={48}
                           height={48}

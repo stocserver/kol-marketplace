@@ -42,17 +42,21 @@ export default function KOLProfile({ kol }: KOLProfileProps) {
       <h2 className="text-xl font-bold text-gray-900 mb-6">About the KOL</h2>
       
       <div className="flex items-start space-x-4 mb-6">
-        <Image
-          src={kol.avatar_url || '/api/placeholder/64/64'}
-          alt={kol.full_name}
-          className="w-16 h-16 rounded-full object-cover"
-          width={64}
-          height={64}
-          onError={(e) => {
-            const target = e.target as HTMLImageElement
-            target.src = '/api/placeholder/64/64'
-          }}
-        />
+        {kol.avatar_url ? (
+          <Image
+            src={kol.avatar_url}
+            alt={kol.full_name}
+            className="w-16 h-16 rounded-full object-cover"
+            width={64}
+            height={64}
+          />
+        ) : (
+          <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center">
+            <span className="text-2xl font-semibold text-gray-500">
+              {kol.full_name?.charAt(0)?.toUpperCase() || '?'}
+            </span>
+          </div>
+        )}
         <div className="flex-1">
           <h3 className="text-lg font-semibold text-gray-900">{kol.full_name}</h3>
           <Link 
@@ -63,7 +67,7 @@ export default function KOLProfile({ kol }: KOLProfileProps) {
           </Link>
           
           <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-            {kol.followers && (
+            {kol.followers && kol.followers > 0 && (
               <div className="flex items-center space-x-1">
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -88,16 +92,16 @@ export default function KOLProfile({ kol }: KOLProfileProps) {
         </div>
       )}
 
-      {(kol.followers || kol.avg_views_per_content) && (
+      {((kol.followers && kol.followers > 0) || (kol.avg_views_per_content && kol.avg_views_per_content > 0)) && (
         <div className="grid grid-cols-2 gap-4 mb-6">
-          {kol.followers && (
+          {kol.followers && kol.followers > 0 && (
             <div className="bg-blue-50 rounded-lg p-4 text-center">
               <div className="text-2xl font-bold text-blue-600">{formatFollowers(kol.followers)}</div>
               <div className="text-sm text-gray-600">Followers</div>
             </div>
           )}
-          
-          {kol.avg_views_per_content && (
+
+          {kol.avg_views_per_content && kol.avg_views_per_content > 0 && (
             <div className="bg-green-50 rounded-lg p-4 text-center">
               <div className="text-2xl font-bold text-green-600">{formatFollowers(kol.avg_views_per_content)}</div>
               <div className="text-sm text-gray-600">Avg. Views</div>

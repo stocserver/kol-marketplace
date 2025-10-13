@@ -78,8 +78,8 @@ export default function ProfilePage() {
           type: profileData.user_type,
           username: profileData.username,
           full_name: profileData.full_name,
-          profile_image: profileData.avatar_url || '/api/placeholder/300/300',
-          cover_image: profileData.cover_image || '/api/placeholder/1200/300',
+          profile_image: profileData.avatar_url || '/images/placeholder-avatar.svg',
+          cover_image: profileData.cover_image || '/images/placeholder-cover.svg',
           bio: profileData.bio || 'No bio provided yet.',
           followers: profileData.followers || 0,
           rating: 4.8, // TODO: Calculate from actual reviews
@@ -100,7 +100,7 @@ export default function ProfilePage() {
             id: gig.id,
             title: gig.title,
             price: gig.price,
-            image: gig.preview_image_url || '/api/placeholder/500/300',
+            image: gig.preview_image_url || '/images/placeholder-gig.svg',
             rating: 4.8, // TODO: Calculate from actual reviews
             orders: 0, // TODO: Count from actual orders
             delivery_days: gig.delivery_days

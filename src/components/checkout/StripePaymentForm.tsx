@@ -11,6 +11,7 @@ interface StripePaymentFormProps {
   processing: boolean
   setProcessing: (processing: boolean) => void
   onBack: () => void
+  returnUrl?: string
 }
 
 export default function StripePaymentForm({
@@ -19,7 +20,8 @@ export default function StripePaymentForm({
   onPaymentError,
   processing,
   setProcessing,
-  onBack
+  onBack,
+  returnUrl
 }: StripePaymentFormProps) {
   const stripe = useStripe()
   const elements = useElements()
@@ -54,7 +56,7 @@ export default function StripePaymentForm({
       const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
-          return_url: `${window.location.origin}/orders/success`,
+          return_url: returnUrl || `${window.location.origin}/orders`,
         },
         redirect: 'if_required',
       })

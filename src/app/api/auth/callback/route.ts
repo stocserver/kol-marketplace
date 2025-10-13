@@ -1,58 +1,78 @@
-import { createClient } from '@/lib/supabase/server'
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 
-export async function GET(request: NextRequest) {
-  console.log('Auth callback: Starting')
-  const { searchParams, origin } = new URL(request.url)
-  const code = searchParams.get('code')
-  console.log('Auth callback: Code received:', !!code)
+async function handle(req: NextRequest) {
+  const requestUrl = new URL(req.url)
+  const code = requestUrl.searchParams.get('code')
+  const cookieStore = await cookies()
+  const cookiesToSet: { name: string; value: string; options?: any }[] = []
 
-  if (code) {
-    try {
-      console.log('Auth callback: Creating Supabase client')
-      const supabase = await createClient()
-      
-      console.log('Auth callback: Exchanging code for session')
-      const { data, error } = await supabase.auth.exchangeCodeForSession(code)
-      console.log('Auth callback: Exchange result:', { 
-        hasSession: !!data.session, 
-        hasUser: !!data.user,
-        error: error?.message 
-      })
-      
-      if (!error && data.session) {
-        console.log('Auth callback: Session exchange successful')
-        
-        // Create the redirect response first
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', data.user.id)
-          .single()
-        console.log('Auth callback: Profile found:', !!profile)
+  // Debug logging
+  const cookieHeader = req.headers.get('cookie') || ''
+  const cookieNames = cookieHeader.split(';').map(p => p.trim().split('=')[0]).filter(Boolean)
+  console.log('Auth callback request URL:', req.url)
+  console.log('Auth callback cookies:', cookieNames)
 
-        // Pass session data to auth-success page via URL params
-        const redirectPath = `/auth-success?access_token=${data.session.access_token}&refresh_token=${data.session.refresh_token}&user_id=${data.user.id}`
-        console.log('Auth callback: Redirecting to:', redirectPath)
-        
-        // Create redirect response
-        const redirectResponse = NextResponse.redirect(`${origin}${redirectPath}`)
-        
-        // Make sure cookies are set in the response
-        // The session should already be set by the Supabase client, but let's ensure it
-        console.log('Auth callback: Setting session cookies')
-        
-        return redirectResponse
-      } else {
-        console.log('Auth callback: Session exchange failed:', error?.message)
-      }
-    } catch (err) {
-      console.error('Auth callback error:', err)
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookies) {
+          cookies.forEach(cookie => cookiesToSet.push(cookie))
+        },
+      },
     }
-  } else {
-    console.log('Auth callback: No code provided')
+  )
+
+  if (!code) {
+    const res = NextResponse.redirect(new URL('/login?error=missing_code', requestUrl.origin))
+    cookiesToSet.forEach(({ name, value, options }) => res.cookies.set(name, value, options))
+    return res
   }
 
-  console.log('Auth callback: Falling back to login redirect')
-  return NextResponse.redirect(`${origin}/login`)
+  const { error } = await supabase.auth.exchangeCodeForSession(code)
+  if (error) {
+    console.error('Auth callback error:', error.message)
+    const res = NextResponse.redirect(new URL('/login?error=oauth_callback_failed', requestUrl.origin))
+    cookiesToSet.forEach(({ name, value, options }) => res.cookies.set(name, value, options))
+    return res
+  }
+
+  let redirectPath = '/login'
+
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single()
+
+      redirectPath = profile ? '/dashboard' : '/signup-complete'
+    }
+  } catch (err) {
+    console.error('Auth callback profile lookup error:', err)
+  }
+
+  const res = NextResponse.redirect(new URL(redirectPath, requestUrl.origin))
+  cookiesToSet.forEach(({ name, value, options }) => res.cookies.set(name, value, options))
+  return res
 }
+
+export async function GET(req: NextRequest) {
+  return handle(req)
+}
+
+export async function POST(req: NextRequest) {
+  return handle(req)
+}
+
+export const dynamic = 'force-dynamic'
+
+

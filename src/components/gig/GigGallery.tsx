@@ -15,28 +15,28 @@ export default function GigGallery({ gig }: GigGalleryProps) {
   const [selectedImage, setSelectedImage] = useState(0)
   
   // Get all available images, prioritizing image_urls array
-  const allImages = gig.image_urls && gig.image_urls.length > 0 
-    ? gig.image_urls 
-    : gig.preview_image_url 
+  const allImages = gig.image_urls && gig.image_urls.length > 0
+    ? gig.image_urls
+    : gig.preview_image_url
     ? [gig.preview_image_url]
-    : ['/api/placeholder/800/450']
-  
-  const currentImage = allImages[selectedImage] || '/api/placeholder/800/450'
+    : []
+
+  const currentImage = allImages[selectedImage]
+
+  if (allImages.length === 0) {
+    return null // Don't render anything if no images
+  }
 
   return (
     <div className="bg-white rounded-lg overflow-hidden shadow-sm border">
       {/* Main Image Display */}
-      <div className="aspect-video bg-gray-100 relative">
+      <div className="relative w-full overflow-hidden bg-gray-100 pb-[56.25%]">
         <Image
           src={currentImage}
           alt={`${gig.title} - Image ${selectedImage + 1}`}
-          className="w-full h-full object-cover"
+          className="absolute inset-0 h-full w-full object-cover"
           fill
           sizes="(max-width: 768px) 100vw, 800px"
-          onError={(e) => {
-            const target = e.target as HTMLImageElement
-            target.src = '/api/placeholder/800/450'
-          }}
         />
         
         {/* Image Counter */}
@@ -81,7 +81,7 @@ export default function GigGallery({ gig }: GigGalleryProps) {
               <button
                 key={index}
                 onClick={() => setSelectedImage(index)}
-                className={`flex-shrink-0 w-16 h-16 rounded-md overflow-hidden border-2 transition-all ${
+                className={`relative flex-shrink-0 w-16 h-16 rounded-md overflow-hidden border-2 transition-all ${
                   selectedImage === index 
                     ? 'border-blue-500 opacity-100' 
                     : 'border-gray-200 opacity-70 hover:opacity-100'
@@ -90,13 +90,9 @@ export default function GigGallery({ gig }: GigGalleryProps) {
                 <Image
                   src={image}
                   alt={`${gig.title} thumbnail ${index + 1}`}
-                  className="w-full h-full object-cover"
+                  className="absolute inset-0 h-full w-full object-cover"
                   fill
                   sizes="64px"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement
-                    target.src = '/api/placeholder/800/450'
-                  }}
                 />
               </button>
             ))}

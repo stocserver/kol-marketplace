@@ -25,16 +25,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get user profile to verify KOL
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('user_type')
-      .eq('id', user.id)
-      .single()
-
-    if (profileError || !profile || profile.user_type !== 'kol') {
-      return NextResponse.json({ error: 'Only KOLs can request payouts' }, { status: 403 })
-    }
+    // Allow dual-role users: rely on ownership check below
 
     // Get order details and verify ownership
     const { data: order, error: orderError } = await supabase

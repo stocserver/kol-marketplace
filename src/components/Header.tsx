@@ -6,13 +6,19 @@ import { useState } from 'react'
 import { useRole } from '@/contexts/RoleContext'
 import { useAuth } from '@/hooks/useAuth'
 import { createClient } from '@/lib/supabase/client'
+import { usePathname } from 'next/navigation'
+import { useSearch } from '@/contexts/SearchContext'
+import { useNotifications } from '@/hooks/useNotifications'
 
 export default function Header() {
   const { user, profile, loading } = useAuth()
   const { currentRole, switchRole, theme } = useRole()
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const pathname = usePathname()
+  const { searchTerm, setSearchTerm } = useSearch()
 
   const supabase = createClient()
+  const { hasUnseen, markAllSeen } = useNotifications()
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -75,7 +81,7 @@ export default function Header() {
                   </button>
                 </div>
                 
-                <nav className="hidden md:flex space-x-6">
+                <nav className="hidden md:flex space-x-6 items-center">
                   <Link 
                     href="/marketplace" 
                     className="text-white/80 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
@@ -87,6 +93,23 @@ export default function Header() {
                     className="text-white/80 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
                   >
                     Dashboard
+                  </Link>
+                  <Link
+                    href="/notifications"
+                    className="relative text-white/80 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"
+                    title="Notifications"
+                    onClick={() => {
+                      // Optimistically clear the indicator before navigation
+                      markAllSeen()
+                    }}
+                  >
+                    <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                    Notifications
+                    {hasUnseen && (
+                      <span className="absolute -top-0.5 -right-0.5 inline-flex h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
+                    )}
                   </Link>
                   <Link 
                     href="/messages" 
@@ -250,20 +273,12 @@ export default function Header() {
                 )}
               </div>
             ) : (
-              <div className="flex items-center space-x-2">
-                <Link
-                  href="/login"
-                  className="text-white/80 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
-                >
-                  Sign In
-                </Link>
-                <Link
-                  href="/login"
-                  className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
-                >
-                  Sign Up
-                </Link>
-              </div>
+              <Link
+                href="/login"
+                className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+              >
+                Sign In
+              </Link>
             )}
           </div>
         </div>

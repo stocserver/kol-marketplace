@@ -66,67 +66,34 @@ export default function ProfilePage() {
   useEffect(() => {
     async function loadProfile() {
       try {
-        // Check localStorage for auth data
-        const authKeys = Object.keys(localStorage).filter(key => 
-          key.includes('supabase.auth.token')
-        )
-        
-        if (authKeys.length === 0) {
+        setLoading(true)
+
+        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        if (authError || !user) {
           router.push('/login')
           return
         }
 
-        // Get user data from localStorage
-        let userId = null
-        for (const key of authKeys) {
-          try {
-            const authData = localStorage.getItem(key)
-            if (authData) {
-              const parsed = JSON.parse(authData)
-              if (parsed.user?.id) {
-                userId = parsed.user.id
-                break
-              }
-            }
-          } catch {
-            console.warn('Failed to parse auth data')
-          }
-        }
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single()
 
-        if (!userId) {
-          router.push('/login')
-          return
-        }
-
-        // Load profile using direct REST API
-        const profileResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}&select=*`,
-          {
-            headers: {
-              'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-              'Content-Type': 'application/json'
-            }
-          }
-        )
-
-        if (profileResponse.ok) {
-          const profileData = await profileResponse.json()
-          if (profileData.length > 0) {
-            const profile = profileData[0]
-            setProfile(profile)
-            setFormData({
-              username: profile.username,
-              full_name: profile.full_name,
-              bio: profile.bio || '',
-              user_type: profile.user_type,
-              country: profile.country || '',
-              languages: profile.languages || [],
-              platforms: profile.platforms || {},
-              company_size: profile.company_size || '',
-              industry: profile.industry || '',
-              website: profile.website || ''
-            })
-          }
+        if (!error && profile) {
+          setProfile(profile as unknown as Profile)
+          setFormData({
+            username: profile.username,
+            full_name: profile.full_name,
+            bio: profile.bio || '',
+            user_type: profile.user_type,
+            country: profile.country || '',
+            languages: profile.languages || [],
+            platforms: profile.platforms || {},
+            company_size: profile.company_size || '',
+            industry: profile.industry || '',
+            website: profile.website || ''
+          })
         }
 
         setLoading(false)
@@ -137,7 +104,7 @@ export default function ProfilePage() {
     }
 
     loadProfile()
-  }, [router])
+  }, [router, supabase])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -205,7 +172,7 @@ export default function ProfilePage() {
       }
 
       console.log('Profile data being sent:', profileData)
-      
+
       const { data, error } = await supabase
         .from('profiles')
         .upsert(profileData)
@@ -213,15 +180,24 @@ export default function ProfilePage() {
 
       console.log('Supabase response data:', data)
       console.log('Supabase error:', error)
+      console.log('Error details:', JSON.stringify(error, null, 2))
 
       if (error) {
-        console.error('Database update failed:', error)
+        console.error('Database update failed:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        })
+
         if (error.code === '23505') {
           setError('Username is already taken. Please choose a different username.')
         } else if (error.code === '23514') {
           setError('Please check your input values. Some fields may not meet the requirements.')
-        } else {
+        } else if (error.message) {
           setError(`Database error: ${error.message}`)
+        } else {
+          setError('An unknown error occurred. Please check the console for details.')
         }
         return
       }

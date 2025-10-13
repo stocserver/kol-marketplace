@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useFavorites } from '@/hooks/useFavorites'
 import { GENRE_CATEGORIES } from '@/lib/constants'
 import KOLRating from '@/components/reviews/KOLRating'
+import { useSearch } from '@/contexts/SearchContext'
 
 interface Gig {
   id: string
@@ -85,11 +86,11 @@ const RATING_OPTIONS = [
 ]
 
 const SORT_OPTIONS = [
-  { label: 'Default', value: 'default' },
+  { label: 'Newest First', value: 'newest' },
   { label: 'Price: Low to High', value: 'price_asc' },
   { label: 'Price: High to Low', value: 'price_desc' },
-  { label: 'Best rated', value: 'rating' },
-  { label: 'Most reviewed', value: 'review_count' }
+  { label: 'Best Rated', value: 'rating' },
+  { label: 'Most Reviewed', value: 'review_count' }
 ]
 
 // Note: Mock data removed - now using real database data
@@ -97,15 +98,19 @@ const SORT_OPTIONS = [
 export default function MarketplacePage() {
   const [gigs, setGigs] = useState<Gig[]>([])
   const [filteredGigs, setFilteredGigs] = useState<Gig[]>([])
-  const [searchTerm, setSearchTerm] = useState('')
+  const { searchTerm, setSearchTerm } = useSearch()
   const [selectedCategory, setSelectedCategory] = useState('')
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([])
   const [selectedViewRange, setSelectedViewRange] = useState('')
   const [selectedCountry, setSelectedCountry] = useState('')
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([])
   const [selectedRating, setSelectedRating] = useState('')
-  const [sortBy, setSortBy] = useState('default')
+  const [sortBy, setSortBy] = useState('newest')
   const [loading, setLoading] = useState(true)
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 24
   const { user } = useAuth()
   const { theme } = useRole()
   const { toggleFavorite, isFavorited } = useFavorites()
@@ -279,28 +284,29 @@ export default function MarketplacePage() {
     }
 
     // Sort the results
-    if (sortBy !== 'default') {
-      filtered.sort((a, b) => {
-        switch (sortBy) {
-          case 'price_asc':
-            return Number(a.price) - Number(b.price) // Low to High: smaller numbers first
-          case 'price_desc':
-            return Number(b.price) - Number(a.price) // High to Low: larger numbers first
-          case 'rating':
-            const ratingA = kolRatings[a.kol_id]?.average || 0
-            const ratingB = kolRatings[b.kol_id]?.average || 0
-            return ratingB - ratingA
-          case 'review_count':
-            const countA = kolRatings[a.kol_id]?.count || 0
-            const countB = kolRatings[b.kol_id]?.count || 0
-            return countB - countA
-          default:
-            return 0 // No sorting for default
-        }
-      })
-    }
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'newest':
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        case 'price_asc':
+          return Number(a.price) - Number(b.price) // Low to High: smaller numbers first
+        case 'price_desc':
+          return Number(b.price) - Number(a.price) // High to Low: larger numbers first
+        case 'rating':
+          const ratingA = kolRatings[a.kol_id]?.average || 0
+          const ratingB = kolRatings[b.kol_id]?.average || 0
+          return ratingB - ratingA
+        case 'review_count':
+          const countA = kolRatings[a.kol_id]?.count || 0
+          const countB = kolRatings[b.kol_id]?.count || 0
+          return countB - countA
+        default:
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      }
+    })
 
     setFilteredGigs(filtered)
+    setCurrentPage(1) // Reset to first page when filters change
   }, [searchTerm, selectedCategory, selectedPlatforms, selectedViewRange, selectedCountry, selectedLanguages, selectedRating, sortBy, gigs, kolRatings])
 
   if (loading) {
@@ -314,250 +320,142 @@ export default function MarketplacePage() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">Service Marketplace</h1>
-          <p className="text-gray-600 mb-6">Discover amazing services from talented KOLs</p>
-          
-          {/* Search and Back Button */}
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <input
-              type="text"
-              placeholder="Search services..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1 max-w-md px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base"
-            />
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Service Marketplace</h1>
             <Link
               href="/dashboard"
               className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap"
             >
-              Back to Dashboard
+              ← Dashboard
             </Link>
           </div>
 
-          {/* Filters */}
-          <div className="bg-white rounded-lg shadow-sm mb-6">
-            <div className="p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Filters</h3>
-              
-              {/* Top Row - Dropdowns */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                {/* Category Dropdown */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
-                  >
-                    <option value="">All Categories</option>
-                    {CATEGORIES.map(category => (
-                      <option key={category} value={category}>{category}</option>
-                    ))}
-                  </select>
+          {/* Compact Filters */}
+          <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
+            {/* Search Bar */}
+            <div className="mb-4">
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
                 </div>
-
-                {/* Country Filter */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Country/Region</label>
-                  <select
-                    value={selectedCountry}
-                    onChange={(e) => setSelectedCountry(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
-                  >
-                    <option value="">All Countries</option>
-                    {COUNTRIES.map(country => (
-                      <option key={country} value={country}>{country}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* View Range Filter */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Average Views</label>
-                  <select
-                    value={selectedViewRange}
-                    onChange={(e) => setSelectedViewRange(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
-                  >
-                    {VIEW_RANGES.map(range => (
-                      <option key={range.label} value={range.label}>{range.label}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Clear All Button */}
-                <div className="flex items-end">
-                  <button
-                    onClick={() => {
-                      setSelectedCategory('')
-                      setSelectedPlatforms([])
-                      setSelectedViewRange('')
-                      setSelectedCountry('')
-                      setSelectedLanguages([])
-                      setSelectedRating('')
-                      setSortBy('default')
-                    }}
-                    className="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-md transition-colors"
-                  >
-                    Clear All Filters
-                  </button>
-                </div>
-              </div>
-
-              {/* Platform Selection */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-3">Platforms</label>
-                <div className="flex flex-wrap gap-2">
-                  {PLATFORM_CONFIG.map(platform => (
-                    <button
-                      key={platform.name}
-                      onClick={() => togglePlatform(platform.name)}
-                      className={`inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                        selectedPlatforms.includes(platform.name)
-                          ? `${platform.color} ring-2 ring-offset-2 ring-blue-500 shadow-md`
-                          : 'bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200'
-                      }`}
-                    >
-                      <span className="mr-2">{platform.logo}</span>
-                      {platform.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Language Selection */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-3">Languages</label>
-                <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-2 bg-gray-50 rounded-lg border">
-                  {LANGUAGES.map(language => (
-                    <button
-                      key={language}
-                      onClick={() => toggleLanguage(language)}
-                      className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
-                        selectedLanguages.includes(language)
-                          ? 'bg-purple-500 text-white shadow-md ring-2 ring-purple-200'
-                          : 'bg-white hover:bg-purple-50 text-gray-700 border border-gray-200 hover:border-purple-200'
-                      }`}
-                    >
-                      {language}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Rating Filter */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-3">Minimum Rating</label>
-                <select
-                  value={selectedRating}
-                  onChange={(e) => setSelectedRating(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  {RATING_OPTIONS.map(option => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Sort Options */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">Sort By</label>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  {SORT_OPTIONS.map(option => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                <input
+                  type="text"
+                  placeholder="Search by service title, description, or KOL name..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                />
               </div>
             </div>
 
-            {/* Active Filters Bar */}
-            {(selectedCategory || selectedPlatforms.length > 0 || selectedViewRange || selectedCountry || selectedLanguages.length > 0 || selectedRating) && (
-              <div className="p-4 bg-gray-50 border-t">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-medium text-gray-600">Active filters:</span>
-                  {selectedCategory && (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-500 text-white">
-                      📁 {selectedCategory}
-                      <button
-                        onClick={() => setSelectedCategory('')}
-                        className="ml-2 text-blue-200 hover:text-white"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  )}
-                  {selectedPlatforms.map(platform => {
-                    const platformData = PLATFORM_CONFIG.find(p => p.name === platform)
-                    return (
-                      <span key={platform} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-500 text-white">
-                        <span className="mr-1">{platformData?.logo}</span>
-                        {platform}
-                        <button
-                          onClick={() => togglePlatform(platform)}
-                          className="ml-2 text-green-200 hover:text-white"
-                        >
-                          ×
-                        </button>
-                      </span>
-                    )
-                  })}
-                  {selectedViewRange && selectedViewRange !== 'Any' && (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-teal-500 text-white">
-                      👁️ {selectedViewRange}
-                      <button
-                        onClick={() => setSelectedViewRange('')}
-                        className="ml-2 text-teal-200 hover:text-white"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  )}
-                  {selectedCountry && (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-orange-500 text-white">
-                      🌍 {selectedCountry}
-                      <button
-                        onClick={() => setSelectedCountry('')}
-                        className="ml-2 text-orange-200 hover:text-white"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  )}
-                  {selectedLanguages.map(language => (
-                    <span key={language} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-500 text-white">
-                      💬 {language}
-                      <button
-                        onClick={() => toggleLanguage(language)}
-                        className="ml-2 text-purple-200 hover:text-white"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                  {selectedRating && (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-500 text-white">
-                      ⭐ {selectedRating}+ stars
-                      <button
-                        onClick={() => setSelectedRating('')}
-                        className="ml-2 text-yellow-200 hover:text-white"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  )}
-                </div>
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Category */}
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">All Categories</option>
+                {CATEGORIES.map(category => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
+
+              {/* Platform */}
+              <div className="flex flex-wrap gap-2">
+                {PLATFORM_CONFIG.map(platform => (
+                  <button
+                    key={platform.name}
+                    onClick={() => togglePlatform(platform.name)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                      selectedPlatforms.includes(platform.name)
+                        ? `${platform.color} ring-2 ring-blue-400`
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                    }`}
+                  >
+                    <span>{platform.logo}</span>
+                    <span>{platform.name}</span>
+                  </button>
+                ))}
               </div>
-            )}
+
+              {/* Country */}
+              <select
+                value={selectedCountry}
+                onChange={(e) => setSelectedCountry(e.target.value)}
+                className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">All Countries</option>
+                {COUNTRIES.map(country => (
+                  <option key={country} value={country}>{country}</option>
+                ))}
+              </select>
+
+              {/* Language */}
+              <select
+                value={selectedLanguages[0] || ''}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    setSelectedLanguages([e.target.value])
+                  } else {
+                    setSelectedLanguages([])
+                  }
+                }}
+                className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">All Languages</option>
+                {LANGUAGES.map(language => (
+                  <option key={language} value={language}>{language}</option>
+                ))}
+              </select>
+
+              {/* Rating */}
+              <select
+                value={selectedRating}
+                onChange={(e) => setSelectedRating(e.target.value)}
+                className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {RATING_OPTIONS.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+
+              {/* Sort */}
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {SORT_OPTIONS.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+
+              {/* Clear Button */}
+              <button
+                onClick={() => {
+                  setSelectedCategory('')
+                  setSelectedPlatforms([])
+                  setSelectedViewRange('')
+                  setSelectedCountry('')
+                  setSelectedLanguages([])
+                  setSelectedRating('')
+                  setSortBy('default')
+                }}
+                className="ml-auto px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium rounded-md transition-colors"
+              >
+                Clear All
+              </button>
+            </div>
           </div>
+
         </div>
 
         {filteredGigs.length === 0 ? (
@@ -584,15 +482,18 @@ export default function MarketplacePage() {
           </div>
         ) : (
           <div className="space-y-4">
+            {/* Pagination Info */}
             <div className="flex items-center justify-between">
               <p className="text-sm text-gray-600">
-                Showing {filteredGigs.length} of {gigs.length} services
+                Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredGigs.length)} of {filteredGigs.length} services
               </p>
             </div>
-            
+
             <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {filteredGigs.map((gig) => (
-                <div key={gig.id} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden">
+              {filteredGigs
+                .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                .map((gig) => (
+                <div key={gig.id} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden flex flex-col h-full">
                   {/* Clickable Gig Image */}
                   <Link href={`/gigs/${gig.id}`}>
                     <div className="aspect-[4/3] bg-gray-200 relative cursor-pointer">
@@ -623,10 +524,10 @@ export default function MarketplacePage() {
                           className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black bg-opacity-50 hover:bg-opacity-70 flex items-center justify-center transition-all"
                           title={isFavorited(gig.id) ? 'Remove from favorites' : 'Add to favorites'}
                         >
-                          <svg 
-                            className={`w-4 h-4 ${isFavorited(gig.id) ? 'text-red-400 fill-current' : 'text-white'}`} 
-                            fill={isFavorited(gig.id) ? 'currentColor' : 'none'} 
-                            stroke="currentColor" 
+                          <svg
+                            className={`w-4 h-4 ${isFavorited(gig.id) ? 'text-red-400 fill-current' : 'text-white'}`}
+                            fill={isFavorited(gig.id) ? 'currentColor' : 'none'}
+                            stroke="currentColor"
                             viewBox="0 0 24 24"
                           >
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
@@ -636,11 +537,11 @@ export default function MarketplacePage() {
                     </div>
                   </Link>
 
-                  <div className="p-3">
-                    {/* Title and KOL */}
-                    <div className="mb-3">
+                  <div className="p-3 flex flex-col flex-grow">
+                    {/* Title and KOL - Fixed height */}
+                    <div className="mb-3 min-h-[60px]">
                       <Link href={`/gigs/${gig.id}`}>
-                        <h3 className="text-sm font-semibold text-gray-900 mb-1 line-clamp-2 cursor-pointer hover:text-blue-600 transition-colors">
+                        <h3 className="text-sm font-semibold text-gray-900 mb-1 line-clamp-2 cursor-pointer hover:text-blue-600 transition-colors h-10">
                           {gig.title}
                         </h3>
                       </Link>
@@ -651,8 +552,8 @@ export default function MarketplacePage() {
                       </Link>
                     </div>
 
-                    {/* Platform Tags */}
-                    <div className="flex flex-wrap gap-1 mb-3">
+                    {/* Platform Tags - Fixed height */}
+                    <div className="flex flex-wrap gap-1 mb-3 min-h-[24px]">
                       {(() => {
                         const platform = PLATFORM_CONFIG.find(p => p.name === gig.platform)
                         return platform ? (
@@ -670,9 +571,9 @@ export default function MarketplacePage() {
                         )
                       })()}
                     </div>
-                    
-                    {/* Location & Language Info */}
-                    <div className="flex flex-wrap gap-1 mb-2">
+
+                    {/* Location & Language Info - Fixed height */}
+                    <div className="flex flex-wrap gap-1 mb-2 min-h-[24px]">
                       {gig.kol?.country && (
                         <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800">
                           🌍 {gig.kol.country}
@@ -690,31 +591,34 @@ export default function MarketplacePage() {
                       )}
                     </div>
 
-                    {/* Rating */}
-                    <div className="mb-2">
+                    {/* Rating - Fixed height */}
+                    <div className="mb-2 min-h-[20px]">
                       <KOLRating kolId={gig.kol_id} size="sm" />
                     </div>
 
-                    {/* Stats Row */}
-                    <div className="flex items-center justify-between text-xs text-gray-600 mb-3">
+                    {/* Stats Row - Fixed height */}
+                    <div className="flex items-center justify-between text-xs text-gray-600 mb-3 min-h-[20px]">
                       <div className="flex items-center space-x-1">
                         <svg className="w-3 h-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         <span className="font-medium">{gig.delivery_days}d delivery</span>
                       </div>
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-gray-500 truncate">
                         {gig.content_type}
                       </div>
                     </div>
 
-                    {/* Price */}
-                    <div className="mb-3">
+                    {/* Spacer to push price and button to bottom */}
+                    <div className="flex-grow"></div>
+
+                    {/* Price - Fixed height */}
+                    <div className="mb-3 min-h-[28px]">
                       <div className="text-lg font-bold text-green-600">
                         ${gig.price.toLocaleString()}
                       </div>
                     </div>
-                    
+
                     {/* Action Button */}
                     <Link
                       href={`/gigs/${gig.id}`}
@@ -726,6 +630,58 @@ export default function MarketplacePage() {
                 </div>
               ))}
             </div>
+
+            {/* Pagination Controls */}
+            {filteredGigs.length > itemsPerPage && (
+              <div className="flex items-center justify-center gap-2 mt-8">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Previous
+                </button>
+
+                <div className="flex gap-1">
+                  {Array.from({ length: Math.ceil(filteredGigs.length / itemsPerPage) }, (_, i) => i + 1)
+                    .filter(page => {
+                      const totalPages = Math.ceil(filteredGigs.length / itemsPerPage)
+                      // Show first page, last page, current page, and pages around current
+                      return page === 1 ||
+                             page === totalPages ||
+                             Math.abs(page - currentPage) <= 1
+                    })
+                    .map((page, index, array) => {
+                      // Add ellipsis if there's a gap
+                      const showEllipsisBefore = index > 0 && page - array[index - 1] > 1
+
+                      return (
+                        <div key={page} className="flex items-center gap-1">
+                          {showEllipsisBefore && <span className="px-2 text-gray-500">...</span>}
+                          <button
+                            onClick={() => setCurrentPage(page)}
+                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                              currentPage === page
+                                ? 'bg-blue-600 text-white'
+                                : 'border border-gray-300 text-gray-700 bg-white hover:bg-gray-50'
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        </div>
+                      )
+                    })}
+                </div>
+
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(Math.ceil(filteredGigs.length / itemsPerPage), prev + 1))}
+                  disabled={currentPage === Math.ceil(filteredGigs.length / itemsPerPage)}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

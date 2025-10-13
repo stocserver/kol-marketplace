@@ -4,6 +4,8 @@ import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useOrders } from '@/hooks/useOrders'
+import { useRole } from '@/contexts/RoleContext'
+import { useRouter } from 'next/navigation'
 
 export interface SponsorUser {
   id: string
@@ -20,6 +22,8 @@ interface SponsorDashboardProps {
 export default function SponsorDashboard({ user }: SponsorDashboardProps) {
   const [activeTab, setActiveTab] = useState('orders')
   const { sponsorOrders, loading: ordersLoading } = useOrders()
+  const { switchRole } = useRole()
+  const router = useRouter()
   
   // Calculate stats directly from the fetched orders (same source as the order list)
   const stats = {
@@ -150,6 +154,23 @@ export default function SponsorDashboard({ user }: SponsorDashboardProps) {
               </div>
             </div>
           </Link>
+
+          <button
+            onClick={() => { switchRole('kol'); router.push('/dashboard?tab=payouts') }}
+            className="bg-white/20 hover:bg-white/30 rounded-lg p-4 transition-colors text-left"
+          >
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-white/20 rounded-lg">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 11H9v-1h2v1zm0-3H9V5h2v5z" />
+                </svg>
+              </div>
+              <div>
+                <p className="font-medium">View KOL Payouts</p>
+                <p className="text-sm opacity-80">Switch to KOL mode</p>
+              </div>
+            </div>
+          </button>
         </div>
       </div>
 
@@ -280,7 +301,7 @@ export default function SponsorDashboard({ user }: SponsorDashboardProps) {
                     <div className="flex-1">
                       <div className="flex items-center space-x-4 mb-4">
                         <Image
-                          src={order.kol.avatar_url || '/api/placeholder/48/48'}
+                          src={order.kol.avatar_url || '/images/placeholder-avatar.svg'}
                           alt={order.kol.full_name}
                           className="w-12 h-12 rounded-full object-cover"
                           width={48}
@@ -462,3 +483,4 @@ export default function SponsorDashboard({ user }: SponsorDashboardProps) {
     </div>
   )
 }
+

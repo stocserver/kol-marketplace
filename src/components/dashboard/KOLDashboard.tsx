@@ -4,12 +4,26 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useOrders } from '@/hooks/useOrders'
+import { useSearchParams } from 'next/navigation'
+
+interface DashboardGig {
+  id: string
+  title: string
+  price: number
+  image?: string
+  orders?: number
+  rating?: number
+  approval_status?: 'pending' | 'approved' | 'rejected'
+  is_active?: boolean
+  admin_notes?: string | null
+}
 
 export interface KOLUser {
   id: string
   username?: string
   full_name?: string
   avatar_url?: string
+  gigs?: DashboardGig[]
   [key: string]: unknown
 }
 
@@ -22,8 +36,11 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
   const { kolOrders, loading: ordersLoading, updateOrderStatus } = useOrders()
   const [payoutRequests, setPayoutRequests] = useState<{id: string; amount: number; status: string; order_id: string; requested_at: string; reviewed_at?: string; kol_message?: string; admin_notes?: string; stripe_transfer_id?: string; orders?: { gig?: { title?: string } }; [key: string]: unknown}[]>([])
   const [payoutLoading, setPayoutLoading] = useState(false)
+  const searchParams = useSearchParams()
   
   // Calculate stats directly from the fetched orders (same source as the order list)
+  const dashboardGigs = Array.isArray(user.gigs) ? (user.gigs as DashboardGig[]) : []
+
   const stats = {
     active: kolOrders.filter(order => 
       ['pending', 'paid', 'in_progress', 'delivered', 'submitted'].includes(order.status)
@@ -35,6 +52,15 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
     totalEarnings: kolOrders
       .filter(order => order.status === 'completed')
       .reduce((sum, order) => sum + (order.kol_earnings || 0), 0)
+  }
+
+  // Tab counts for quick visibility
+  const counts = {
+    orders: kolOrders.length,
+    gigs: dashboardGigs.length,
+    earnings: Array.isArray((user as any).recent_transactions) ? (user as any).recent_transactions.length : 0,
+    payouts: payoutRequests.length,
+    messages: Array.isArray((user as any).recent_messages) ? (user as any).recent_messages.length : 0,
   }
   
   console.log('KOL Dashboard Stats:', {
@@ -69,6 +95,24 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
     }
   }
 
+  const getGigApprovalBadge = (status?: DashboardGig['approval_status']) => {
+    switch (status) {
+      case 'approved':
+        return { label: 'Approved', className: 'bg-green-50 text-green-700 border border-green-200' }
+      case 'rejected':
+        return { label: 'Rejected', className: 'bg-red-50 text-red-700 border border-red-200' }
+      default:
+        return { label: 'Pending Review', className: 'bg-yellow-50 text-yellow-700 border border-yellow-200' }
+    }
+  }
+
+  const getGigActiveBadge = (isActive?: boolean) => {
+    if (isActive === false) {
+      return { label: 'Paused', className: 'bg-gray-100 text-gray-600 border border-gray-200' }
+    }
+    return { label: 'Active', className: 'bg-blue-50 text-blue-700 border border-blue-200' }
+  }
+
   const getOrderAction = (status: string) => {
     switch (status) {
       case 'confirmed':
@@ -92,6 +136,20 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
       loadPayoutRequests()
     }
   }, [activeTab])
+
+  // Preload payout requests so the tab badge shows a count
+  useEffect(() => {
+    loadPayoutRequests()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Sync active tab with URL query (?tab=...)
+  useEffect(() => {
+    const tab = searchParams?.get('tab')
+    if (tab && ['orders','gigs','earnings','payouts','messages'].includes(tab)) {
+      setActiveTab(tab)
+    }
+  }, [searchParams])
 
   const loadPayoutRequests = async () => {
     setPayoutLoading(true)
@@ -298,7 +356,11 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                {tab}
+                {tab === 'orders' && `Orders (${counts.orders})`}
+                {tab === 'gigs' && `Gigs (${counts.gigs})`}
+                {tab === 'earnings' && `Earnings (${counts.earnings})`}
+                {tab === 'payouts' && `Payouts (${counts.payouts})`}
+                {tab === 'messages' && `Messages (${counts.messages})`}
               </button>
             ))}
           </nav>
@@ -345,7 +407,7 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
                     <div className="flex-1">
                       <div className="flex items-center space-x-4 mb-4">
                         <Image
-                          src={order.sponsor.avatar_url || '/api/placeholder/48/48'}
+                          src={order.sponsor.avatar_url || '/images/placeholder-avatar.svg'}
                           alt={order.sponsor.full_name}
                           className="w-12 h-12 rounded-full object-cover"
                           width={48}
@@ -385,8 +447,8 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
                             disabled={action.disabled}
                             onClick={() => {
                               if (!action.disabled) {
-                                const newStatus = action.action === 'start' ? 'in_progress' : 
-                                                action.action === 'submit' ? 'submitted' : 
+                                const newStatus = action.action === 'start' ? 'in_progress' :
+                                                action.action === 'submit' ? 'submitted' :
                                                 action.action === 'revise' ? 'submitted' : order.status
                                 if (newStatus !== order.status) {
                                   updateOrderStatus(order.id, newStatus as 'in_progress' | 'submitted')
@@ -415,34 +477,57 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
             <div>
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-gray-900">Your Gigs</h3>
-                <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold">
+                <Link
+                  href="/gigs/create"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold inline-flex items-center justify-center"
+                >
                   Create New Gig
-                </button>
+                </Link>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {(Array.isArray(user.gigs) ? user.gigs : []).map((gig: {id: string; title: string; price: number; image?: string; orders?: number}) => (
-                  <div key={gig.id} className="border border-gray-200 rounded-lg overflow-hidden">
-                    <div className="aspect-video bg-gray-200 relative">
-                      <Image src={gig.image || '/api/placeholder/400/300'} alt={gig.title} className="w-full h-full object-cover" fill sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw" />
-                    </div>
-                    <div className="p-4">
-                      <h4 className="font-semibold text-gray-900 mb-2">{gig.title}</h4>
-                      <div className="flex items-center justify-between text-sm text-gray-600 mb-3">
-                        <span>${gig.price}</span>
-                        <span>{gig.orders || 0} orders</span>
+                {dashboardGigs.map((gig) => {
+                  const approvalBadge = getGigApprovalBadge(gig.approval_status)
+                  const activeBadge = getGigActiveBadge(gig.is_active)
+
+                  return (
+                    <div key={gig.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                      <div className="relative w-full overflow-hidden bg-gray-200 pb-[56.25%]">
+                        <Image src={gig.image || '/images/placeholder-gig.svg'} alt={gig.title} className="absolute inset-0 h-full w-full object-cover" fill sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw" />
                       </div>
-                      <div className="flex space-x-2">
-                        <button className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-2 rounded text-sm font-medium">
-                          Edit
-                        </button>
-                        <button className="flex-1 bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-2 rounded text-sm font-medium">
-                          View
-                        </button>
+                      <div className="p-4">
+                        <div className="flex items-start justify-between mb-2">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${approvalBadge.className}`}>{approvalBadge.label}</span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${activeBadge.className}`}>{activeBadge.label}</span>
+                        </div>
+                        <h4 className="font-semibold text-gray-900 mb-2">{gig.title}</h4>
+                        <div className="flex items-center justify-between text-sm text-gray-600 mb-3">
+                          <span>${gig.price}</span>
+                          <span>{gig.orders || 0} orders</span>
+                        </div>
+                        {gig.approval_status === 'rejected' && gig.admin_notes && (
+                          <div className="mb-3 rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-700">
+                            <strong>Admin feedback:</strong> {gig.admin_notes}
+                          </div>
+                        )}
+                        <div className="flex space-x-2">
+                          <Link
+                            href={`/gigs/${gig.id}/edit`}
+                            className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-2 rounded text-sm font-medium inline-flex items-center justify-center"
+                          >
+                            Edit
+                          </Link>
+                          <Link
+                            href={`/gigs/${gig.id}`}
+                            className="flex-1 bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-2 rounded text-sm font-medium inline-flex items-center justify-center"
+                          >
+                            View
+                          </Link>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}
@@ -528,7 +613,7 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
                             <div className="flex-1">
                               <div className="flex items-center space-x-3 mb-2">
                                 <Image
-                                  src={order.sponsor.avatar_url || '/api/placeholder/32/32'}
+                                  src={order.sponsor.avatar_url || '/images/placeholder-avatar.svg'}
                                   alt={order.sponsor.full_name}
                                   className="w-8 h-8 rounded-full object-cover"
                                   width={32}
@@ -575,7 +660,7 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
                           </div>
                         </div>
                       ))}
-                    </div>
+                </div>
                   )
                 })()}
               </div>
@@ -603,7 +688,7 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
                               <div>
                                 <h5 className="font-medium text-gray-900">{request.orders?.gig?.title || 'Unknown Gig'}</h5>
                                 <p className="text-sm text-gray-600">
-                                  Order #{request.order_id.slice(0, 8)} • Amount: ${request.amount / 100}
+                                  Order #{request.order_id.slice(0, 8)} Ã¢â‚¬Â¢ Amount: ${request.amount / 100}
                                 </p>
                               </div>
                             </div>
@@ -633,14 +718,14 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
                           </div>
                           {request.status === 'completed' && request.stripe_transfer_id && (
                             <div className="text-right">
-                              <span className="text-green-600 font-medium text-sm">✅ Transferred</span>
+                              <span className="text-green-600 font-medium text-sm">Ã¢Å“â€¦ Transferred</span>
                               <p className="text-xs text-gray-500">Transfer ID: {request.stripe_transfer_id}</p>
                             </div>
                           )}
                         </div>
                       </div>
                     ))}
-                  </div>
+                </div>
                 )}
               </div>
             </div>
@@ -653,7 +738,7 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
                 {(Array.isArray(user.recent_messages) ? user.recent_messages : []).map((message: {id: string; from: string; preview: string; time: string; timestamp: string; order_id: string; sender_image?: string; sender_name?: string}) => (
                   <div key={message.id} className="flex items-start space-x-4 p-4 bg-gray-50 rounded-lg">
                     <Image
-                      src={message.sender_image || '/api/placeholder/40/40'}
+                      src={message.sender_image || '/images/placeholder-avatar.svg'}
                       alt={message.sender_name || 'User'}
                       className="w-10 h-10 rounded-full object-cover"
                       width={40}
@@ -666,12 +751,12 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
                       </div>
                       <p className="text-gray-700">{message.preview}</p>
                       <Link href={`/orders/${message.order_id}`}>
-                        <span className="text-blue-600 hover:text-blue-800 text-sm font-medium">View Conversation →</span>
+                        <span className="text-blue-600 hover:text-blue-800 text-sm font-medium">View Conversation Ã¢â€ â€™</span>
                       </Link>
                     </div>
                   </div>
                 ))}
-              </div>
+                </div>
             </div>
           )}
         </div>
@@ -679,3 +764,4 @@ export default function KOLDashboard({ user }: KOLDashboardProps) {
     </div>
   )
 }
+

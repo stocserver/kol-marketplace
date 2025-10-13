@@ -92,7 +92,7 @@ export interface Gig {
   kol?: Profile
 }
 
-export type OrderStatus = 'pending' | 'paid' | 'in_progress' | 'delivered' | 'completed' | 'cancelled'
+export type OrderStatus = 'pending' | 'paid' | 'in_progress' | 'delivered' | 'completed' | 'cancelled' | 'revision' | 'disputed'
 
 export interface Order {
   id: string

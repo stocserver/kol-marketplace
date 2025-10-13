@@ -7,9 +7,21 @@ import { useRole } from '@/contexts/RoleContext'
 import KOLDashboard, { KOLUser } from '@/components/dashboard/KOLDashboard'
 import SponsorDashboard, { SponsorUser } from '@/components/dashboard/SponsorDashboard'
 
+interface DashboardGigSummary {
+  id: string
+  title: string
+  price: number
+  image?: string
+  orders: number
+  rating: number
+  approval_status?: 'pending' | 'approved' | 'rejected'
+  is_active?: boolean
+  admin_notes?: string | null
+}
+
 interface DashboardData {
   orders: Record<string, unknown>[]
-  gigs: Record<string, unknown>[]
+  gigs: DashboardGigSummary[]
   rating: number
   total_orders: number
   active_orders: number
@@ -102,7 +114,8 @@ export default function DashboardPage() {
           recent_messages: []
         }
 
-        if (profileData.user_type === 'kol') {
+        // Fetch data based on current UI role, not just stored user_type
+        if (currentRole === 'kol') {
           // Fetch KOL dashboard data
           const [ordersResponse, gigsResponse, ratingsResponse, earningsResponse, pendingEarningsResponse, monthlyEarningsResponse] = await Promise.all([
             // Get all orders for this KOL
@@ -121,7 +134,6 @@ export default function DashboardPage() {
               .from('gigs')
               .select('*')
               .eq('kol_id', profileData.id)
-              .eq('is_active', true)
               .order('created_at', { ascending: false }),
             
             // Get average rating
@@ -183,7 +195,10 @@ export default function DashboardPage() {
               price: gig.price,
               image: gig.image_urls?.[0] || gig.preview_image_url || 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=400',
               orders: dashboardData.orders.filter(order => order.gig_id === gig.id).length,
-              rating: 4.8 // TODO: Calculate from actual reviews
+              rating: 4.8, // TODO: Calculate from actual reviews
+              approval_status: gig.approval_status,
+              is_active: gig.is_active,
+              admin_notes: gig.admin_notes || null
             }))
           }
 
@@ -213,7 +228,7 @@ export default function DashboardPage() {
           // For KOLs, we don't track spending - they earn money
           dashboardData.total_spent = 0
           
-        } else if (profileData.user_type === 'sponsor') {
+        } else if (currentRole === 'sponsor') {
           // Fetch Sponsor dashboard data
           const [ordersResponse] = await Promise.all([
             // Get all orders placed by this sponsor
@@ -319,7 +334,7 @@ export default function DashboardPage() {
     }
 
     loadUserProfile()
-  }, [router, supabase])
+  }, [router, supabase, currentRole])
 
   if (loading) {
     return (

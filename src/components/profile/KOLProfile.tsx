@@ -234,7 +234,7 @@ export default function KOLProfile({ user }: KOLProfileProps) {
                         {(user.gigs as GigData[]).map((gig: GigData) => (
                       <Link key={gig.id as string} href={`/gigs/${gig.id}`}>
                         <div className="bg-gray-50 rounded-lg overflow-hidden hover:shadow-md transition-shadow cursor-pointer">
-                          <div className="aspect-video bg-gray-200">
+                          <div className="relative w-full overflow-hidden bg-gray-200 pb-[56.25%]">
                             <Image
                               src={(gig.image as string) || '/images/default-gig.jpg'}
                               alt={gig.title as string}

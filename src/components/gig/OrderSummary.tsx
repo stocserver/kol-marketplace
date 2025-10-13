@@ -30,9 +30,15 @@ export default function OrderSummary({ gig }: OrderSummaryProps) {
   const supabase = createClient()
 
   const basePrice = gig.price
-  const fastDeliveryPrice = fastDelivery ? Math.floor(basePrice * 0.5) : 0 // 50% extra for fast delivery
-  const serviceFee = Math.floor((basePrice + fastDeliveryPrice) * 0.05) // 5% service fee
-  const totalPrice = basePrice + fastDeliveryPrice + serviceFee
+
+  // Calculate Stripe fee (2.9% + $0.30)
+  const stripeFee = Math.round((basePrice * 0.029 + 0.30) * 100) / 100
+
+  // Calculate 1% service fee
+  const serviceFee = Math.round(basePrice * 0.01 * 100) / 100
+
+  // Total amount to charge
+  const totalPrice = basePrice + stripeFee + serviceFee
 
   useEffect(() => {
     const checkUser = async () => {
@@ -72,52 +78,15 @@ export default function OrderSummary({ gig }: OrderSummaryProps) {
       <div className="text-center mb-6">
         <div className="text-3xl font-bold text-gray-900">
           ${totalPrice}
-          {fastDelivery && (
-            <div className="text-base font-normal text-gray-600 mt-1">
-              (includes fast delivery)
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Delivery Options */}
+      {/* Delivery Time */}
       <div className="mb-6">
         <h3 className="font-semibold text-gray-900 mb-3">Delivery Time</h3>
-        <div className="space-y-3">
-          <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-            <input
-              type="radio"
-              name="delivery"
-              checked={!fastDelivery}
-              onChange={() => setFastDelivery(false)}
-              className="text-blue-600"
-            />
-            <div className="flex-1">
-              <div className="font-medium text-gray-900">Standard Delivery</div>
-              <div className="text-sm text-gray-600">{gig.delivery_days} days - ${basePrice}</div>
-            </div>
-          </label>
-
-          {gig.fast_delivery && (
-            <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-              <input
-                type="radio"
-                name="delivery"
-                checked={fastDelivery}
-                onChange={() => setFastDelivery(true)}
-                className="text-blue-600"
-              />
-              <div className="flex-1">
-                <div className="font-medium text-gray-900 flex items-center space-x-2">
-                  <span>Fast Delivery</span>
-                  <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">⚡</span>
-                </div>
-                <div className="text-sm text-gray-600">
-                  {gig.fast_delivery_days} day - ${basePrice + fastDeliveryPrice}
-                </div>
-              </div>
-            </label>
-          )}
+        <div className="p-3 border rounded-lg bg-gray-50">
+          <div className="font-medium text-gray-900">Standard Delivery</div>
+          <div className="text-sm text-gray-600">{gig.delivery_days} days</div>
         </div>
       </div>
 
@@ -140,23 +109,26 @@ export default function OrderSummary({ gig }: OrderSummaryProps) {
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
             <span className="text-gray-600">Gig price</span>
-            <span className="text-gray-900">${basePrice}</span>
+            <span className="text-gray-900">${basePrice.toFixed(2)}</span>
           </div>
-          {fastDelivery && (
-            <div className="flex justify-between">
-              <span className="text-gray-600">Fast delivery</span>
-              <span className="text-gray-900">${fastDeliveryPrice}</span>
-            </div>
-          )}
           <div className="flex justify-between">
-            <span className="text-gray-600">Service fee</span>
-            <span className="text-gray-900">${serviceFee}</span>
+            <span className="text-gray-600">Processing fee</span>
+            <span className="text-gray-900">${stripeFee.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-600">Service fee (1%)</span>
+            <span className="text-gray-900">${serviceFee.toFixed(2)}</span>
           </div>
           <hr className="my-2" />
-          <div className="flex justify-between font-semibold">
+          <div className="flex justify-between font-semibold text-base">
             <span>Total</span>
-            <span>${totalPrice}</span>
+            <span>${totalPrice.toFixed(2)}</span>
           </div>
+        </div>
+        <div className="mt-3 pt-3 border-t border-gray-200">
+          <p className="text-xs text-gray-500">
+            <span className="font-medium">Refund policy:</span> If order is cancelled via dispute, you'll receive ${basePrice.toFixed(2)} back (base price only).
+          </p>
         </div>
       </div>
 
@@ -187,7 +159,7 @@ export default function OrderSummary({ gig }: OrderSummaryProps) {
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
               </svg>
-              <span>Expected delivery: {fastDelivery ? gig.fast_delivery_days : gig.delivery_days} days</span>
+              <span>Expected delivery: {gig.delivery_days} days</span>
             </div>
           </div>
         </div>
