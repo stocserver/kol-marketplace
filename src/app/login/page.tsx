@@ -36,10 +36,13 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
 
+    const redirectBase = typeof window !== 'undefined'
+      ? window.location.origin
+      : (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: 'http://localhost:3000/api/auth/callback',
+        redirectTo: `${redirectBase}/api/auth/callback`,
       },
     })
 
