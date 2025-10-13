@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
 import { useNotifications } from '@/hooks/useNotifications'
 import { useAuth } from '@/hooks/useAuth'
 import { createClient } from '@/lib/supabase/client'
@@ -20,7 +21,7 @@ type NotificationItem = {
   targetPath: string
 }
 
-const typeStyles: Record<NotificationType, { bg: string; fg: string; icon: JSX.Element; label: string }> = {
+const typeStyles: Record<NotificationType, { bg: string; fg: string; icon: ReactNode; label: string }> = {
   order_received: {
     bg: 'bg-blue-100',
     fg: 'text-blue-600',
