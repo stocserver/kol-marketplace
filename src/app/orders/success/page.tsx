@@ -1,9 +1,9 @@
 "use client"
 
-import { useEffect } from 'react'
+import { useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 
-export default function OrderSuccessRedirect() {
+function SuccessContent() {
   const router = useRouter()
   const search = useSearchParams()
 
@@ -41,3 +41,17 @@ export default function OrderSuccessRedirect() {
   )
 }
 
+export default function OrderSuccessRedirect() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center text-gray-700">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-6"></div>
+          <p>Loading...</p>
+        </div>
+      </div>
+    }>
+      <SuccessContent />
+    </Suspense>
+  )
+}
