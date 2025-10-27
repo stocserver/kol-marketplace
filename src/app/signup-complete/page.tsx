@@ -84,7 +84,7 @@ export default function SignupCompletePage() {
       }
     } catch (err) {
       console.error('Signup form: Exception', err)
-      setError('完成註冊時發生錯誤')
+      setError('An error occurred while completing registration')
     }
     
     setLoading(false)
@@ -94,9 +94,9 @@ export default function SignupCompletePage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 sm:px-6 lg:px-8">
       <div className="w-full max-w-md bg-white rounded-lg shadow-md p-4 sm:p-6">
         <div className="mb-6">
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">完成註冊</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Complete Registration</h1>
           <p className="mt-2 text-gray-600">
-            請完成您的個人資料設定
+            Please complete your profile setup
           </p>
         </div>
         
@@ -108,7 +108,7 @@ export default function SignupCompletePage() {
           )}
           
           <div>
-            <label htmlFor="userType" className="block text-sm font-medium text-gray-700">用戶類型</label>
+            <label htmlFor="userType" className="block text-sm font-medium text-gray-700">User Type</label>
             <select
               id="userType"
               value={userType}
@@ -116,13 +116,13 @@ export default function SignupCompletePage() {
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               disabled={loading}
             >
-              <option value="kol">KOL (意見領袖)</option>
-              <option value="sponsor">商家</option>
+              <option value="kol">KOL (Influencer)</option>
+              <option value="sponsor">Merchant</option>
             </select>
           </div>
           
           <div>
-            <label htmlFor="fullName" className="block text-sm font-medium text-gray-700">姓名</label>
+            <label htmlFor="fullName" className="block text-sm font-medium text-gray-700">Full Name</label>
             <input
               id="fullName"
               type="text"
@@ -135,7 +135,7 @@ export default function SignupCompletePage() {
           </div>
           
           <div>
-            <label htmlFor="username" className="block text-sm font-medium text-gray-700">用戶名稱</label>
+            <label htmlFor="username" className="block text-sm font-medium text-gray-700">Username</label>
             <input
               id="username"
               type="text"
@@ -152,7 +152,7 @@ export default function SignupCompletePage() {
             className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-50"
             disabled={loading}
           >
-            {loading ? '註冊中...' : '完成註冊'}
+            {loading ? 'Registering...' : 'Complete Registration'}
           </button>
         </form>
       </div>
