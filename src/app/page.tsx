@@ -27,16 +27,16 @@ export default function Home() {
           </p>
 
           {/* Search Bar */}
-          <form onSubmit={handleSearch} className="max-w-2xl mx-auto">
+          <form onSubmit={handleSearch} className="max-w-2xl mx-auto px-4 sm:px-0">
             <div className="flex gap-2">
               <input
                 type="text"
                 placeholder="Search for services..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="flex-1 px-6 py-4 text-lg border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="flex-1 px-3 py-2 sm:px-6 sm:py-4 text-sm sm:text-lg border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
-              <Button type="submit" size="lg" className="text-lg px-8">
+              <Button type="submit" size="lg" className="text-sm sm:text-lg px-4 sm:px-8 whitespace-nowrap">
                 Search
               </Button>
             </div>
